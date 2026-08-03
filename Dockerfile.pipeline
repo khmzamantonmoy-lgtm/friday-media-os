@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+# FFmpeg required for render_worker.py (MoviePy shells out to it)
+# ImageMagick required by MoviePy's TextClip for caption overlays
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    imagemagick \
+    fonts-dejavu-core \
+    fontconfig \
+    && rm -rf /var/lib/apt/lists/* \
+    && sed -i '/<policy domain="path" rights="none" pattern="@\*"/d' $(find /etc -name "policy.xml") 2>/dev/null || true
+
+WORKDIR /app
+
+COPY requirements-pipeline.txt .
+RUN pip install --no-cache-dir -r requirements-pipeline.txt
+
+COPY src/ ./src/
+
+# No CMD web server here on purpose. Cloud Run Jobs execute this once per invocation
+# and exit — no persistent listening process, no --port. This is what keeps it out
+# of the "long-lived process in a restricted execution context" abuse pattern.
+ENTRYPOINT ["python", "-m", "src.pipeline_coordinator"]
