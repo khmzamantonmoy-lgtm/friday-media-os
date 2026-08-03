@@ -1,0 +1,9 @@
+# Exclude YouTube API secrets and dynamically generated refresh tokens
+src/config/youtube_client_secret.json
+src/config/youtube_token.json
+**/youtube_client_secret.json
+**/youtube_token.json
+src/config/youtube_credentials/
+*.json
+!firestore.indexes.json
+!cloudbuild*.yaml
