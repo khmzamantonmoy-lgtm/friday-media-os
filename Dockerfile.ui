@@ -1,0 +1,29 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# UI has its own lightweight requirements — no ffmpeg, no moviepy, no genai/imagen SDKs
+COPY requirements-ui.txt .
+RUN pip install --no-cache-dir -r requirements-ui.txt
+
+COPY dashboard/ ./dashboard/
+COPY src/__init__.py ./src/__init__.py
+COPY src/job_trigger.py ./src/job_trigger.py
+COPY src/config/__init__.py ./src/config/__init__.py
+COPY src/config/firestore_schema.py ./src/config/firestore_schema.py
+COPY src/workers/youtube_worker.py ./src/workers/youtube_worker.py
+COPY src/auth/ ./src/auth/
+COPY src/scheduler/ ./src/scheduler/
+COPY src/agents/ ./src/agents/
+COPY src/verification/ ./src/verification/
+
+ENV PORT=8501
+ENV PYTHONPATH=/app
+EXPOSE 8501
+
+# Cloud Run injects $PORT; Streamlit must bind to 0.0.0.0 and that port
+CMD streamlit run dashboard/Home.py \
+    --server.port=${PORT} \
+    --server.address=0.0.0.0 \
+    --server.headless=true \
+    --server.enableCORS=false

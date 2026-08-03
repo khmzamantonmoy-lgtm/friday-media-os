@@ -6,6 +6,8 @@ import pytz
 from google.cloud import firestore
 from src.job_trigger import trigger_pipeline_job
 from src.workers.youtube_worker import upload_video
+from src.agents.google_agent_client import GoogleAgentClient
+from src.verification.verification_layer import VerificationLayer
 
 logger = logging.getLogger("autonomous_scheduler")
 logging.basicConfig(level=logging.INFO)
@@ -73,54 +75,17 @@ def calculate_next_available_slot(
     return datetime.datetime.now(pytz.UTC) + datetime.timedelta(hours=2)
 
 
-def generate_ai_topic(db, brand_id: str, brand_profile: dict) -> str:
-    """Generates a non-repetitive topic using Gemini 2.5 Flash and brand memory."""
-    mem_doc = db.collection("brand_memory").document(brand_id).get()
-    recent_topics = []
-    if mem_doc.exists:
-        recent_topics = mem_doc.to_dict().get("recent_topics", [])
-
-    from google import genai
-    from google.genai import types
-
-    client = genai.Client(
-        vertexai=True,
-        project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"),
-        location=os.environ.get("GCP_REGION", "us-central1"),
-    )
-
-    prompt = (
-        f"You are an expert AI content strategist. Generate a single highly engaging, "
-        f"unique video topic for the brand: {brand_profile.get('display_name', brand_id)}.\n"
-        f"Brand Profile:\n"
-        f"- Tone: {brand_profile.get('tone', '')}\n"
-        f"- Target Audience: {brand_profile.get('audience', '')}\n"
-        f"- Core Angle: {brand_profile.get('content_angle', '')}\n"
-        f"- Categories: {brand_profile.get('categories', [])}\n"
-        f"- Target Keywords: {brand_profile.get('preferred_keywords', [])}\n"
-        f"- Avoid: {brand_profile.get('avoid_topics', [])}\n\n"
-        f"To prevent repetition, do NOT generate any topics similar to these recent topics:\n"
-        f"{json.dumps(recent_topics)}\n\n"
-        f"Output ONLY the topic string (max 80 chars), no description, no quotes, no formatting."
-    )
-
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(temperature=0.7),
-    )
-    return response.text.strip().strip('"').strip("'")
-
-
 def run_scheduler() -> dict:
     """
-    Orchestrates one autonomous cycle:
-    1. Scan READY content queue items → schedule them.
-    2. Check brand daily quotas → trigger new pipeline runs (Calendar / AI / Hybrid).
+    Orchestrates one autonomous cycle using Google Agent Platform + Verification Layer:
+    1. Scan READY content queue items -> schedule them.
+    2. Check brand daily quotas -> invoke brand Google Agent -> verify package -> trigger pipeline.
     3. Auto-publish due pending posts.
     """
     logger.info("Starting autonomous scheduler execution...")
     db = firestore.Client()
+    agent_client = GoogleAgentClient()
+    verifier = VerificationLayer()
 
     settings_doc = db.collection("automation_settings").document("global").get()
     if not settings_doc.exists:
@@ -157,8 +122,8 @@ def run_scheduler() -> dict:
 
             c_data = content_doc.to_dict()
             titles = c_data.get("title_suggestions", [])
-            title = titles[0] if titles else item.get("topic", "Video Post")
-            caption = c_data.get("caption", "")
+            title = c_data.get("seo_title") or (titles[0] if titles else item.get("topic", "Video Post"))
+            caption = c_data.get("caption") or c_data.get("description", "")
             hashtags = c_data.get("hashtags", [])
 
             slot_time = calculate_next_available_slot(
@@ -181,6 +146,9 @@ def run_scheduler() -> dict:
                     "chosen_title": title,
                     "chosen_caption": caption,
                     "chosen_hashtags": hashtags,
+                    "agent_name": c_data.get("agent_name", "Autonomous AI"),
+                    "quality_score": c_data.get("quality_score", 0.9),
+                    "confidence": c_data.get("confidence", 0.9),
                 }
             )
 
@@ -214,7 +182,7 @@ def run_scheduler() -> dict:
             strategy = profile.get("topic_strategy", "hybrid")
             freq = profile.get("publish_frequency_per_day", 1)
 
-            # Count today's scheduled posts using composite index (brand_id, scheduled_time)
+            # Count today's scheduled posts
             existing_today = list(
                 db.collection("scheduled_posts")
                 .where(filter=firestore.FieldFilter("brand_id", "==", brand_id))
@@ -229,7 +197,7 @@ def run_scheduler() -> dict:
                 .stream()
             )
 
-            # Count actively in-progress items using composite index (brand_id, status)
+            # Count in-progress items
             in_progress_statuses = [
                 "QUEUED",
                 "GENERATING",
@@ -260,12 +228,15 @@ def run_scheduler() -> dict:
                 continue
 
             logger.info(
-                f"Brand {brand_id} has {remaining_slots} open slot(s) today. Triggering generation..."
+                f"Brand {brand_id} has {remaining_slots} open slot(s) today. Invoking Google Agent..."
             )
 
-            # A. Editorial Calendar — indexed (brand ASC, processed ASC, date ASC)
-            topic = None
-            source = "ai"
+            # Fetch memory document
+            mem_doc = db.collection("brand_memory").document(brand_id).get()
+            memory_data = mem_doc.to_dict() if mem_doc.exists else {}
+
+            # Check Editorial Calendar if strategy is hybrid/calendar
+            calendar_topic = None
             if strategy in ["calendar", "hybrid"]:
                 calendar_items = list(
                     db.collection("editorial_calendar")
@@ -279,8 +250,7 @@ def run_scheduler() -> dict:
                 )
                 if calendar_items:
                     cal_doc = calendar_items[0]
-                    topic = cal_doc.to_dict().get("topic")
-                    source = "calendar"
+                    calendar_topic = cal_doc.to_dict().get("topic")
                     db.collection("editorial_calendar").document(
                         cal_doc.id
                     ).update(
@@ -290,37 +260,71 @@ def run_scheduler() -> dict:
                             "updated_at": firestore.SERVER_TIMESTAMP,
                         }
                     )
-                    logger.info(f"Retrieved topic from calendar: '{topic}'")
+                    logger.info(f"Retrieved assignment from calendar: '{calendar_topic}'")
 
-            # B. AI fallback
-            if not topic:
-                if strategy == "calendar":
-                    logger.info(
-                        "Calendar-only mode and calendar is empty. Skipping."
-                    )
-                    continue
-                topic = generate_ai_topic(db, brand_id, profile)
-                source = "ai"
-                logger.info(f"Generated AI topic: '{topic}'")
+            # Invoke Agent with up to 2 retries if verification fails
+            agent_package = None
+            verification_res = None
 
+            for attempt in range(2):
+                package = agent_client.invoke_agent(
+                    brand_id=brand_id,
+                    brand_profile=profile,
+                    brand_memory=memory_data,
+                    calendar_topic=calendar_topic,
+                )
+                v_res = verifier.verify_decision(package, profile, memory_data)
+                if v_res.passed:
+                    agent_package = package
+                    verification_res = v_res
+                    break
+                logger.warning(
+                    f"Attempt {attempt+1}: Verification rejected package ({v_res.reason}). Retrying..."
+                )
+
+            if not agent_package or not verification_res or not verification_res.passed:
+                logger.error(f"Abandoning generation for brand {brand_id}: Verification failed after retries.")
+                results["errors"].append(f"Brand {brand_id}: Verification failed ({verification_res.reason if verification_res else 'Unknown'})")
+                continue
+
+            topic = agent_package.get("topic")
+            source = "calendar" if calendar_topic else "agent"
             content_id = f"auto_{brand_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
+            # Store rich decision package in content_items
             db.collection("content_items").document(content_id).set(
                 {
                     "brand_id": brand_id,
                     "topic": topic,
                     "status": "draft",
                     "source": source,
+                    "agent_name": agent_package.get("agent_name"),
+                    "category": agent_package.get("category"),
+                    "editorial_reasoning": agent_package.get("editorial_reasoning"),
+                    "confidence": agent_package.get("confidence"),
+                    "quality_score": agent_package.get("quality_score"),
+                    "verification_status": verification_res.status,
+                    "verification_sources": agent_package.get("verification_sources", []),
+                    "similarity_score": verification_res.metrics.get("effective_similarity"),
+                    "seo_title": agent_package.get("seo_title"),
+                    "caption": agent_package.get("description"),
+                    "hashtags": agent_package.get("hashtags", []),
+                    "cta": agent_package.get("cta"),
+                    "script": agent_package.get("script_narration"),
+                    "scene_plan": agent_package.get("scene_plan", []),
                     "created_at": firestore.SERVER_TIMESTAMP,
                     "updated_at": firestore.SERVER_TIMESTAMP,
                 }
             )
+
             db.collection("content_queue").document(content_id).set(
                 {
                     "brand_id": brand_id,
                     "topic": topic,
                     "status": "QUEUED",
                     "source": source,
+                    "agent_name": agent_package.get("agent_name"),
+                    "quality_score": agent_package.get("quality_score"),
                     "created_at": firestore.SERVER_TIMESTAMP,
                     "updated_at": firestore.SERVER_TIMESTAMP,
                 }
@@ -329,7 +333,7 @@ def run_scheduler() -> dict:
             trigger_pipeline_job(brand_id, topic, content_id)
             results["triggered"].append(content_id)
             logger.info(
-                f"Triggered pipeline run for {content_id} (topic: {topic})"
+                f"Triggered pipeline run for {content_id} via {agent_package.get('agent_name')} (topic: '{topic}')"
             )
 
         except Exception as e:
@@ -338,7 +342,6 @@ def run_scheduler() -> dict:
 
     # ── STEP 3: Auto-publish due posts ────────────────────────────────────────
     now_utc = datetime.datetime.now(pytz.UTC)
-    # Use indexed query: status ASC, scheduled_time ASC
     due_posts = list(
         db.collection("scheduled_posts")
         .where(filter=firestore.FieldFilter("status", "==", "pending"))
