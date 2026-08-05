@@ -1,0 +1,9 @@
+streamlit==1.38.0
+google-cloud-firestore==2.19.0
+google-cloud-storage==2.18.2
+google-cloud-run==0.10.9
+google-auth-oauthlib
+google-api-python-client
+google-cloud-secret-manager
+google-genai==0.3.0
+pytz

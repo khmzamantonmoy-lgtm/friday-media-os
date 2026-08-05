@@ -22,7 +22,7 @@ st.set_page_config(page_title="Upload & Schedule — FRIDAY Media OS", layout="w
 apply_saas_theme()
 render_header("Upload & Schedule", "Social Platform Distribution & AI Metadata Refinement", badge="PUBLISHER")
 
-db = firestore.Client()
+db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
 
 # Query published content items
 published_docs = list(

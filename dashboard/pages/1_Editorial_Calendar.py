@@ -22,7 +22,7 @@ st.set_page_config(page_title="Editorial Calendar - FRIDAY Media OS", layout="wi
 apply_saas_theme()
 render_header("Editorial Calendar", "Brand Content Planning & Google Agent Assignment Matrix", badge="PLANNER")
 
-db = firestore.Client()
+db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
 
 # --- Add Calendar Assignment Form ---
 with st.expander("➕ Add Optional Manual Topic Assignment"):

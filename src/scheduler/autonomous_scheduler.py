@@ -83,7 +83,7 @@ def run_scheduler() -> dict:
     3. Auto-publish due pending posts.
     """
     logger.info("Starting autonomous scheduler execution...")
-    db = firestore.Client()
+    db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
     agent_client = GoogleAgentClient()
     verifier = VerificationLayer()
 
@@ -390,8 +390,9 @@ def run_scheduler() -> dict:
                     "posted_at": firestore.SERVER_TIMESTAMP,
                 }
             )
-            db.collection("content_queue").document(content_id).update(
-                {"status": "PUBLISHED", "updated_at": firestore.SERVER_TIMESTAMP}
+            db.collection("content_queue").document(content_id).set(
+                {"status": "PUBLISHED", "updated_at": firestore.SERVER_TIMESTAMP},
+                merge=True
             )
 
             results["published"].append(content_id)

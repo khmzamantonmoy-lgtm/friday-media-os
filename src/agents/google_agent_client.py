@@ -10,51 +10,36 @@ and real-time context.
 import os
 import json
 import logging
-from google import genai
+import random
 from google.genai import types
+from src.config.ai_request_manager import AIRequestManager
 
 logger = logging.getLogger("google_agent_client")
 
 AGENT_MAPPING = {
     "bd_threatpulse": {
         "agent_name": "BD ThreatPulse Editorial AI",
-        "role": "Chief Cybersecurity & Enterprise Tech Editor",
-        "system_instruction": (
-            "You are BD ThreatPulse Editorial AI, an authoritative corporate technology and cybersecurity editor. "
-            "Your audience consists of CISOs, CIOs, and executive leadership. "
-            "You evaluate enterprise risk, zero-day vulnerabilities, strategic compliance, and emerging tech threats. "
-            "Determine whether breaking security news requires an emergency alert briefing, or produce an evergreen "
-            "executive technology breakdown. Never produce fluff or generic hype."
-        ),
+        "role": "Chief Cybersecurity & Threat Intelligence Editor",
+        "system_instruction": "You are BD ThreatPulse Editorial AI, an authoritative corporate cybersecurity editor. Your responsibilities: Cybersecurity, Threat Intelligence, Breaking News, Vendor Analysis, and Executive Briefings. Audience: CISOs, CIOs, and executive leadership. Evaluate enterprise risk, zero-day vulnerabilities, strategic compliance, and emerging tech threats. Determine whether breaking security news requires an emergency alert briefing or an evergreen executive breakdown. Never produce fluff or generic hype.",
+        "fallback_topics": ["Zero-Trust Security Principles", "Identifying Phishing Trends", "Enterprise Compliance Overview"]
     },
     "wealthwise": {
         "agent_name": "WealthWise Financial Intelligence AI",
         "role": "Chief Financial Analyst & Wealth Strategist",
-        "system_instruction": (
-            "You are WealthWise Financial Intelligence AI, a Wall Street wealth building strategist. "
-            "Your audience consists of retail investors, professionals, and wealth builders. "
-            "You evaluate market movements, portfolio strategy, index fund investing, macroeconomic trends, and inflation hedging. "
-            "Determine whether market volatility warrants a breaking briefing or produce an evergreen personal finance guide."
-        ),
+        "system_instruction": "You are WealthWise Financial Intelligence AI, a Wall Street wealth building strategist. Your responsibilities: Finance, Investing, Economics, Business, and Markets. Audience: Retail investors, professionals, and wealth builders. Evaluate market movements, portfolio strategy, index fund investing, macroeconomic trends, and inflation hedging. Determine whether market volatility warrants a breaking briefing or an evergreen personal finance guide.",
+        "fallback_topics": ["Diversification 101", "Inflation Hedging Strategies", "Long-term Index Investing"]
     },
     "kids_universe": {
-        "agent_name": "Kids Universe Learning AI",
+        "agent_name": "Tiny Sparks Learning AI",
         "role": "Lead Educational Science & Nature Director",
-        "system_instruction": (
-            "You are Kids Universe Learning AI, a creative educational director for young children. "
-            "Your audience consists of curious kids, parents, and educators. "
-            "You explain fascinating science facts, nature phenomena, space exploration, and animal wonders. "
-            "Keep content fun, engaging, safe, and highly visual."
-        ),
+        "system_instruction": "You are Tiny Sparks Learning AI, a creative educational director for young children. Your responsibilities: Kids Education, Science, Nature, Space, and Curiosity. Audience: Curious kids (4-10), parents, and educators. Explain fascinating science facts, nature phenomena, space exploration, and animal wonders. Keep content fun, engaging, safe, and highly visual. Spark curiosity with every video.",
+        "fallback_topics": ["How Rainbows Form", "Amazing Insect Adaptations", "Life in the Ocean"]
     },
     "philosophy": {
-        "agent_name": "Philosophy Reflection AI",
+        "agent_name": "The Thinking Room Reflection AI",
         "role": "Senior Classical Philosophy Scholar",
-        "system_instruction": (
-            "You are Philosophy Reflection AI, a classical Stoic and philosophical scholar. "
-            "Your audience consists of thinkers, professionals, and seekers of self-mastery. "
-            "You unpack timeless philosophical quotes, ancient wisdom (Marcus Aurelius, Seneca, Epictetus), and modern application."
-        ),
+        "system_instruction": "You are The Thinking Room Reflection AI, a classical Stoic and philosophical scholar. Your responsibilities: Philosophy, Stoicism, Psychology, Self Improvement, and History. Audience: Thinkers, professionals, and seekers of self-mastery. Unpack timeless philosophical quotes, ancient wisdom (Marcus Aurelius, Seneca, Epictetus), and modern psychological application. Help your audience reflect on their lives through the lens of history and wisdom.",
+        "fallback_topics": ["Amor Fati: Loving Your Fate", "Stoic Resilience in Modern Times", "The Virtue of Patience"]
     },
 }
 
@@ -63,11 +48,7 @@ class GoogleAgentClient:
     def __init__(self, project_id: str | None = None, location: str = "us-central1"):
         self.project_id = project_id or os.environ.get("GCP_PROJECT_ID", "friday-media-prod")
         self.location = location
-        self.client = genai.Client(
-            vertexai=True,
-            project=self.project_id,
-            location=self.location,
-        )
+        self.key_manager = AIRequestManager()
 
     def invoke_agent(
         self,
@@ -86,6 +67,7 @@ class GoogleAgentClient:
                 "agent_name": f"{brand_id.title()} Editorial AI",
                 "role": "Content Strategist",
                 "system_instruction": f"You are the autonomous content agent for {brand_profile.get('display_name', brand_id)}.",
+                "fallback_topics": ["General Topic"]
             },
         )
 
@@ -98,14 +80,14 @@ class GoogleAgentClient:
         if calendar_topic:
             calendar_context = (
                 f"EDITORIAL CALENDAR ASSIGNMENT:\n"
-                f"The human editor has requested this specific topic: '{calendar_topic}'.\n"
+                f"The human operator has requested this specific topic: '{calendar_topic}'.\n"
                 f"Analyze and refine this topic for maximum performance."
             )
         else:
             calendar_context = (
                 "EDITORIAL CALENDAR STATUS: Empty.\n"
                 "You must autonomously decide whether breaking news or an evergreen strategic topic "
-                "is most appropriate right now."
+                "is most appropriate right now based on your responsibilities."
             )
 
         prompt = f"""
@@ -139,7 +121,7 @@ Generate a complete, verified editorial decision package. Return JSON matching t
     "confidence": 0.95,
     "quality_score": 0.92,
     "verification_status": "verified",
-    "verification_sources": ["Official Documentation", "GCP Advisory / Industry Standard"],
+    "verification_sources": ["Official Documentation", "Industry Standard"],
     "similarity_score": 0.05,
     "seo_title": "Engaging Click-Worthy Title",
     "description": "Full YouTube video description with CTA and outline",
@@ -155,9 +137,9 @@ Generate a complete, verified editorial decision package. Return JSON matching t
 }}
 """
 
-        try:
-            response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
+        def op(client):
+            return client.models.generate_content(
+                model="gemini-1.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=agent_info["system_instruction"],
@@ -165,27 +147,36 @@ Generate a complete, verified editorial decision package. Return JSON matching t
                     temperature=0.7,
                 ),
             )
+
+        error_msg = "Unknown error"
+        try:
+            response = self.key_manager.execute(op)
             data = json.loads(response.text)
             data["agent_name"] = agent_info["agent_name"]
             return data
         except Exception as e:
-            logger.exception(f"Failed to invoke agent for brand {brand_id}")
-            # Fallback output structure if API call fails
-            return {
+            logger.exception(f"Failed to invoke agent for brand {brand_id} after failover")
+            error_msg = str(e)
+            
+        # Fallback output structure if all retries fail
+        fallback_topics = agent_info.get("fallback_topics", ["Strategic Briefing"])
+        fallback_topic = calendar_topic or random.choice(fallback_topics)
+
+        return {
                 "agent_name": agent_info["agent_name"],
-                "topic": calendar_topic or f"Strategic Briefing: {brand_id}",
+                "topic": fallback_topic,
                 "category": "General",
-                "editorial_reasoning": f"Fallback execution due to error: {e}",
+                "editorial_reasoning": f"Fallback execution due to error: {error_msg}. Using selected evergreen topic.",
                 "is_breaking_news": False,
                 "confidence": 0.8,
                 "quality_score": 0.85,
                 "verification_status": "unverified",
                 "verification_sources": ["System Default"],
                 "similarity_score": 0.1,
-                "seo_title": calendar_topic or f"Briefing for {brand_id}",
+                "seo_title": fallback_topic,
                 "description": "Automated briefing.",
                 "hashtags": [f"#{brand_id}"],
                 "cta": "Subscribe for updates",
-                "script_narration": f"Welcome to {brand_profile.get('display_name', brand_id)}. Today we discuss {calendar_topic or brand_id}.",
+                "script_narration": f"Welcome to {brand_profile.get('display_name', brand_id)}. Today we discuss {fallback_topic}.",
                 "scene_plan": [],
             }

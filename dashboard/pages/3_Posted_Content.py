@@ -21,7 +21,7 @@ st.set_page_config(page_title="Posted Content - FRIDAY Media OS", layout="wide")
 apply_saas_theme()
 render_header("Posted Content", "Media Management & Verified Distribution Archive", badge="ARCHIVE")
 
-db = firestore.Client()
+db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
 
 # Query posted/scheduled content
 posted_docs = list(

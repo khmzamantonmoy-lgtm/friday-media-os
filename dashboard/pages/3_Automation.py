@@ -26,7 +26,7 @@ st.set_page_config(page_title="Autonomous Studio - FRIDAY Media OS", layout="wid
 apply_saas_theme()
 render_header("Autonomous Studio", "Google Agent Platform Operations & Autonomous Publishing Center", badge="AUTONOMOUS")
 
-db = firestore.Client()
+db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
 
 # --- Global Settings Panel ---
 settings_ref = db.collection("automation_settings").document("global")

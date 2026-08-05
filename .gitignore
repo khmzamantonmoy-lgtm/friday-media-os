@@ -1,9 +1,94 @@
-# Exclude YouTube API secrets and dynamically generated refresh tokens
+# ======================================================
+# FRIDAY Media OS - Production .gitignore
+# ======================================================
+
+# ------------------------
+# Python
+# ------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# ------------------------
+# Environment & Secrets
+# ------------------------
+.env
+.env.*
+!.env.example
+
+# Google Credentials
+service-account.json
+service_account.json
+credentials.json
+key.json
+*.pem
+*.key
+
+# YouTube OAuth
 src/config/youtube_client_secret.json
 src/config/youtube_token.json
+src/config/youtube_credentials/
 **/youtube_client_secret.json
 **/youtube_token.json
-src/config/youtube_credentials/
-*.json
+
+# ------------------------
+# IDE
+# ------------------------
+.vscode/
+.idea/
+*.swp
+
+# ------------------------
+# Logs
+# ------------------------
+logs/
+*.log
+
+# ------------------------
+# Runtime
+# ------------------------
+tmp/
+temp/
+.cache/
+
+# ------------------------
+# OS Files
+# ------------------------
+.DS_Store
+Thumbs.db
+
+# ------------------------
+# Docker
+# ------------------------
+docker-data/
+postgres-data/
+ollama-data/
+
+# ------------------------
+# Build Artifacts
+# ------------------------
+dist/
+build/
+
+# ------------------------
+# Cloud Shell
+# ------------------------
+.cloudshell/
+.history
+
+# ------------------------
+# Keep Important Configuration
+# ------------------------
 !firestore.indexes.json
 !cloudbuild*.yaml
+!docker-compose.yml
+!docker-compose.yaml
+!requirements*.txt

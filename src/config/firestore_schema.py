@@ -7,6 +7,7 @@ Collections:
   - content_items: pipeline execution status, script text, GCS asset URIs
 """
 
+import os
 from google.cloud import firestore
 
 # --- Status lifecycle for content_items ---
@@ -84,7 +85,8 @@ BRAND_PROFILES = {
 
 
 def get_db(project_id: str | None = None) -> firestore.Client:
-    return firestore.Client(project=project_id) if project_id else firestore.Client()
+    pid = project_id or os.environ.get("GCP_PROJECT_ID", "friday-media-prod")
+    return firestore.Client(project=pid)
 
 
 def seed_brands(db: firestore.Client) -> None:
