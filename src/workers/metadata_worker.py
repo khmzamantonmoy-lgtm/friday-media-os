@@ -8,9 +8,9 @@ Supports both the new comprehensive publishing package and the legacy script-pha
 import json
 import os
 from google.genai import types
-from src.config.gemini_key_manager import GeminiKeyManager
+from src.config.ai_request_manager import AIRequestManager
 
-MODEL_NAME = "gemini-1.5-flash-001"
+MODEL_NAME = "gemini-2.5-flash"
 
 SYSTEM_INSTRUCTIONS = """You are an elite social media copywriter and growth marketer. Given a brand profile, a video topic, and the narration script, generate a comprehensive publishing metadata package.
 
@@ -53,7 +53,7 @@ def generate_publishing_metadata(brand: dict, topic: str, script: dict) -> dict:
     """
     Invokes Gemini to construct a complete social publishing package for a content item.
     """
-    key_manager = GeminiKeyManager()
+    key_manager = AIRequestManager()
 
     prompt = (
         f"Brand: {brand.get('display_name', '')}\n"

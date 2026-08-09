@@ -163,12 +163,14 @@ def render_video(
         main_video = main_video.set_audio(audio_clip)
         main_video = main_video.set_duration(total_duration)
 
-        from src.workers.outro_worker import generate_outro
-        
-        outro_duration = 8  # 8-second branded outro
-        outro_clip = generate_outro(brand, duration=outro_duration, video_size=VIDEO_SIZE).fadein(1.0)
-
-        final = concatenate_videoclips([main_video, outro_clip], method="compose")
+        brand_id = brand.get("brand_id", "")
+        if brand_id in ["kids_universe", "philosophy"]:
+            final = main_video
+        else:
+            from src.workers.outro_worker import generate_outro
+            outro_duration = 8  # 8-second branded outro
+            outro_clip = generate_outro(brand, duration=outro_duration, video_size=VIDEO_SIZE).fadein(1.0)
+            final = concatenate_videoclips([main_video, outro_clip], method="compose")
 
         output_path = os.path.join(tmp, f"{content_id}.mp4")
         final.write_videofile(
@@ -176,7 +178,7 @@ def render_video(
             fps=30,
             codec="libx264",
             audio_codec="aac",
-            preset="medium",
+            preset="ultrafast",
             threads=2,
             ffmpeg_params=[
                 "-pix_fmt", "yuv420p",      # YouTube-required pixel format

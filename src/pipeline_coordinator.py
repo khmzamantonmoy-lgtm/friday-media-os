@@ -37,13 +37,40 @@ def run_pipeline(brand_id: str, topic: str, content_id: str) -> None:
     create_content_item(db, content_id, brand_id, topic)
 
     try:
-        logger.info(f"[{content_id}] Generating script...")
-        update_status(db, content_id, STATUS_GENERATING_SCRIPT)
-        script = generate_script(brand, topic)
+        # Check if pre-generated content exists from Google Agents
+        content_ref = db.collection("content_items").document(content_id)
+        content_doc = content_ref.get()
+        c_data = content_doc.to_dict() if content_doc.exists else {}
 
-        logger.info(f"[{content_id}] Generating publishing metadata...")
-        from src.workers.metadata_worker import generate_metadata
-        metadata = generate_metadata(script, brand)
+        if c_data.get("script") and c_data.get("scene_plan"):
+            logger.info(f"[{content_id}] Reusing agent-generated script and scene plan.")
+            visual_prompts = []
+            cumulative_time = 0
+            for scene in c_data.get("scene_plan", []):
+                visual_prompts.append({
+                    "text": scene.get("visual_prompt", ""),
+                    "timestamp": cumulative_time
+                })
+                cumulative_time += scene.get("duration", 5)
+            
+            script = {
+                "narration": c_data.get("script"),
+                "visual_prompts": visual_prompts
+            }
+            
+            metadata = {
+                "caption": c_data.get("caption") or "",
+                "hashtags": c_data.get("hashtags") or [],
+                "title_suggestions": [c_data.get("seo_title")] if c_data.get("seo_title") else [topic]
+            }
+        else:
+            logger.info(f"[{content_id}] Generating script...")
+            update_status(db, content_id, STATUS_GENERATING_SCRIPT)
+            script = generate_script(brand, topic)
+
+            logger.info(f"[{content_id}] Generating publishing metadata...")
+            from src.workers.metadata_worker import generate_metadata
+            metadata = generate_metadata(script, brand)
 
         update_status(
             db,
@@ -55,29 +82,48 @@ def run_pipeline(brand_id: str, topic: str, content_id: str) -> None:
             title_suggestions=metadata["title_suggestions"],
         )
 
-        logger.info(f"[{content_id}] Synthesizing voice...")
-        update_status(db, content_id, STATUS_GENERATING_AUDIO)
-        audio_uri = synthesize_voice(
-            script["narration"], brand_id, brand["voice_id"], content_id
-        )
-        update_status(db, content_id, STATUS_GENERATING_AUDIO, audio_uri=audio_uri)
-
-        logger.info(f"[{content_id}] Generating images...")
+        from concurrent.futures import ThreadPoolExecutor
+        
+        logger.info(f"[{content_id}] Initiating parallel audio synthesis and image generation...")
         update_status(db, content_id, STATUS_GENERATING_IMAGES)
-        image_uris = generate_images(script["visual_prompts"], brand, content_id)
-        update_status(db, content_id, STATUS_GENERATING_IMAGES, image_uris=image_uris)
+        
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            future_voice = executor.submit(
+                synthesize_voice, script["narration"], brand_id, brand["voice_id"], content_id
+            )
+            future_images = executor.submit(
+                generate_images, script["visual_prompts"], brand, content_id
+            )
+            
+            audio_uri = future_voice.result()
+            image_uris = future_images.result()
+
+        update_status(
+            db,
+            content_id,
+            STATUS_GENERATING_IMAGES,
+            audio_uri=audio_uri,
+            image_uris=image_uris,
+        )
 
         logger.info(f"[{content_id}] Rendering final video...")
         update_status(db, content_id, STATUS_RENDERING)
         final_uri, srt_uri = render_video(script, audio_uri, image_uris, brand_id, content_id)
 
         logger.info(f"[{content_id}] Generating full publishing package...")
-        try:
-            from src.workers.metadata_worker import generate_publishing_metadata
-            publishing_package = generate_publishing_metadata(brand, topic, script)
-        except Exception as pe:
-            logger.warning(f"[{content_id}] Failed to generate publishing package: {pe}")
-            publishing_package = {}
+        if c_data.get("seo_title") or c_data.get("caption"):
+            publishing_package = {
+                "title": c_data.get("seo_title") or topic,
+                "description": c_data.get("caption") or "",
+                "tags": c_data.get("hashtags") or []
+            }
+        else:
+            try:
+                from src.workers.metadata_worker import generate_publishing_metadata
+                publishing_package = generate_publishing_metadata(brand, topic, script)
+            except Exception as pe:
+                logger.warning(f"[{content_id}] Failed to generate publishing package: {pe}")
+                publishing_package = {}
 
         update_status(
             db, 
@@ -104,9 +150,37 @@ def run_pipeline(brand_id: str, topic: str, content_id: str) -> None:
 
 
 if __name__ == "__main__":
-    brand_id = os.environ["BRAND_ID"]
-    topic = os.environ["TOPIC"]
-    content_id = os.environ["CONTENT_ID"]
-
-    run_pipeline(brand_id, topic, content_id)
+    import sys
+    from google.cloud import firestore
+    
+    brand_id = os.environ.get("BRAND_ID")
+    topic = os.environ.get("TOPIC")
+    content_id = os.environ.get("CONTENT_ID")
+    
+    if not content_id:
+        print("Error: CONTENT_ID environment variable not set.")
+        sys.exit(1)
+        
+    db = firestore.Client()
+    doc_ref = db.collection("content_items").document(content_id)
+    doc = doc_ref.get()
+    
+    if doc.exists:
+        data = doc.to_dict()
+        auth_brand_id = data.get("brand_id")
+        auth_topic = data.get("topic")
+        print(f"Loaded authoritative Firestore state for {content_id}: brand_id={auth_brand_id}, topic={auth_topic}")
+        
+        # Execute the new incremental state-machine worker path
+        from src.engine.brand_worker import BrandWorker
+        worker = BrandWorker()
+        worker.run_cycle_for_item(content_id)
+    else:
+        # Fallback to legacy run_pipeline for backward compatibility if doc doesn't exist
+        print(f"Warning: Document {content_id} not found in Firestore. Running legacy pipeline coordinator.")
+        if not brand_id or not topic:
+            print("Error: BRAND_ID and TOPIC environment variables are required for legacy fallback.")
+            sys.exit(1)
+        run_pipeline(brand_id, topic, content_id)
     # Process exits here — Cloud Run Job execution ends, no listener left running.
+

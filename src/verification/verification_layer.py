@@ -42,11 +42,39 @@ class VerificationLayer:
         quality = float(agent_package.get("quality_score", 0.0))
         sources = agent_package.get("verification_sources", [])
         is_breaking = agent_package.get("is_breaking_news", False)
+        brand_id = brand_profile.get("brand_id") or agent_package.get("brand_id") or ""
 
-        # 1. Similarity Check against recent topics & titles
-        recent_topics = brand_memory.get("recent_topics", [])
-        recent_titles = brand_memory.get("recent_titles", [])
-        calculated_similarity = self._compute_similarity(topic, recent_topics + recent_titles)
+        # 1. Gather comprehensive history (memory + active queues + scheduled posts)
+        recent_topics = list(brand_memory.get("recent_topics", []))
+        recent_titles = list(brand_memory.get("recent_titles", []))
+        active_topics = []
+        
+        if brand_id:
+            try:
+                from google.cloud import firestore
+                import os
+                db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
+                
+                # Fetch active queue items
+                active_docs = db.collection("content_queue").where(filter=firestore.FieldFilter("brand_id", "==", brand_id)).stream()
+                for doc in active_docs:
+                    t = doc.to_dict().get("topic")
+                    if t:
+                        active_topics.append(t)
+                        
+                # Fetch scheduled/pending posts
+                post_docs = db.collection("scheduled_posts").where(filter=firestore.FieldFilter("brand_id", "==", brand_id)).stream()
+                for doc in post_docs:
+                    t = doc.to_dict().get("topic")
+                    if t:
+                        active_topics.append(t)
+            except Exception as fe:
+                logger.warning(f"Failed to query active topics from Firestore: {fe}")
+
+        combined_history = list(set(recent_topics + recent_titles + active_topics))
+
+        # 2. Compute similarity using Vertex AI Semantic Check with Jaccard Fallback
+        calculated_similarity = self._check_semantic_duplication(topic, combined_history)
 
         # Override package similarity if calculated is higher
         pkg_similarity = float(agent_package.get("similarity_score", 0.0))
@@ -114,6 +142,51 @@ class VerificationLayer:
             reason="All quality, safety, and non-repetition thresholds passed.",
             metrics=metrics,
         )
+
+    def _check_semantic_duplication(self, topic: str, history: list[str]) -> float:
+        """Determines semantic concept similarity using Gemini (Vertex AI)."""
+        if not history:
+            return 0.0
+        
+        from src.config.ai_request_manager import AIRequestManager
+        from google.genai import types
+        import json
+        
+        # Take the last 40 items to avoid token bloat
+        history_subset = history[-40:]
+        
+        prompt = f"""
+Analyze the proposed new video topic and compare it against the list of recently generated/published topics to determine if it is a semantic duplicate or covers the same core concept/idea (even if phrased differently).
+
+Proposed Topic: "{topic}"
+
+Recent Topics:
+{json.dumps(history_subset, indent=2)}
+
+Return a JSON object matching this exact structure:
+{{
+    "is_semantic_duplicate": true,
+    "estimated_similarity_score": 0.0,
+    "reasoning": "Detailed explanation of why it is or is not a semantic duplicate"
+}}
+"""
+        try:
+            key_manager = AIRequestManager()
+            def op(client):
+                return client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.0,
+                    ),
+                )
+            res = key_manager.execute(op)
+            result = json.loads(res.text)
+            return float(result.get("estimated_similarity_score", 0.0))
+        except Exception as e:
+            logger.warning(f"Semantic similarity check failed, falling back to Jaccard: {e}")
+            return self._compute_similarity(topic, history)
 
     def _compute_similarity(self, target: str, history: list[str]) -> float:
         """Computes Jaccard word-overlap similarity score against recent history."""

@@ -80,7 +80,7 @@ def upload_video(channel: str, content_id: str, video_gs_uri: str, title: str, d
                     "categoryId": "28"  # Science & Technology
                 },
                 "status": {
-                    "privacyStatus": "private"  # Strict safety default
+                    "privacyStatus": "public"
                 }
             },
             media_body=media

@@ -9,9 +9,9 @@ Output dict: { hook, narration, visual_prompts: [{text, timestamp}] }
 import json
 import os
 from google.genai import types
-from src.config.gemini_key_manager import GeminiKeyManager
+from src.config.ai_request_manager import AIRequestManager
 
-MODEL_NAME = "gemini-1.5-flash-001"
+MODEL_NAME = "gemini-2.5-flash"
 
 SYSTEM_INSTRUCTIONS = """You are a short-form video scriptwriter. Given a brand's voice/style \
 and a topic, produce a JSON object with exactly these keys:
@@ -25,15 +25,18 @@ Return ONLY valid JSON, no markdown fences, no commentary.
 
 
 def generate_script(brand: dict, topic: str) -> dict:
-    key_manager = GeminiKeyManager()
+    key_manager = AIRequestManager()
 
     content_angle = brand.get("content_angle", "")
     angle_prompt = f"Content angle & positioning: {content_angle}\n" if content_angle else ""
 
+    brand_name = brand.get("brand_name") or brand.get("display_name") or brand.get("name") or brand.get("brand_id", "Brand")
+    visual_style = brand.get("visual_style", "Modern, engaging short-form video visuals")
+
     prompt = (
-        f"Brand: {brand['display_name']}\n"
+        f"Brand: {brand_name}\n"
         f"{angle_prompt}"
-        f"Visual style guide: {brand['visual_style']}\n"
+        f"Visual style guide: {visual_style}\n"
         f"Topic: {topic}\n\n"
         f"Write a 28-35 second short-form video script for this brand and topic. "
         f"Keep narration tight and punchy — this is for Reels/Shorts/TikTok feed "

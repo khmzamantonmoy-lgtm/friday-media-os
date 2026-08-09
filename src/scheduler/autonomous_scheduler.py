@@ -1,411 +1,409 @@
-import os
-import json
-import datetime
 import logging
-import pytz
+import datetime
 from google.cloud import firestore
-from src.job_trigger import trigger_pipeline_job
-from src.workers.youtube_worker import upload_video
-from src.agents.google_agent_client import GoogleAgentClient
-from src.verification.verification_layer import VerificationLayer
 
-logger = logging.getLogger("autonomous_scheduler")
+from src.engine.goal_engine import GoalEngine
+from src.config.brand_registry import BRAND_REGISTRY
+
+logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
-
-def calculate_next_available_slot(
-    db, brand_id: str, publish_windows: list, timezone_str: str
-) -> datetime.datetime:
-    """Finds the next empty publication window slot using indexed query."""
-    try:
-        tz = pytz.timezone(timezone_str)
-    except Exception:
-        tz = pytz.UTC
-
-    now = datetime.datetime.now(tz)
-
-    for day_offset in range(7):
-        target_date = now + datetime.timedelta(days=day_offset)
-        for window in publish_windows:
-            try:
-                start_str, end_str = window.split("-")
-                sh, sm = map(int, start_str.strip().split(":"))
-                eh, em = map(int, end_str.strip().split(":"))
-                slot_start = target_date.replace(
-                    hour=sh, minute=sm, second=0, microsecond=0
-                )
-                slot_end = target_date.replace(
-                    hour=eh, minute=em, second=0, microsecond=0
-                )
-            except Exception as e:
-                logger.warning(f"Failed to parse window '{window}': {e}")
-                continue
-
-            if slot_end < now:
-                continue
-
-            # Use indexed composite query: brand_id ASC, scheduled_time ASC
-            conflicts = list(
-                db.collection("scheduled_posts")
-                .where(filter=firestore.FieldFilter("brand_id", "==", brand_id))
-                .where(
-                    filter=firestore.FieldFilter(
-                        "scheduled_time", ">=", slot_start
-                    )
-                )
-                .where(
-                    filter=firestore.FieldFilter(
-                        "scheduled_time", "<=", slot_end
-                    )
-                )
-                .limit(1)
-                .stream()
-            )
-
-            if not conflicts:
-                import random
-
-                duration_minutes = int(
-                    (slot_end - slot_start).total_seconds() / 60
-                )
-                random_offset = random.randint(0, max(0, duration_minutes))
-                return slot_start + datetime.timedelta(minutes=random_offset)
-
-    # Fallback: 2 hours from now
-    return datetime.datetime.now(pytz.UTC) + datetime.timedelta(hours=2)
 
 
 def run_scheduler() -> dict:
     """
-    Orchestrates one autonomous cycle using Google Agent Platform + Verification Layer:
-    1. Scan READY content queue items -> schedule them.
-    2. Check brand daily quotas -> invoke brand Google Agent -> verify package -> trigger pipeline.
-    3. Auto-publish due pending posts.
+    Lightweight orchestrator:
+    - Implements Global Production Lease to prevent concurrent execution overlaps
+    - Runs housekeeping (fails stuck items, re-verifies PUBLIC uploads)
+    - Wakes up GoalEngine for each brand using round-robin interleaving.
     """
+    import uuid
+    import os
     logger.info("Starting autonomous scheduler execution...")
-    db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
-    agent_client = GoogleAgentClient()
-    verifier = VerificationLayer()
+    db = firestore.Client()
+    
+    execution_name = os.environ.get("CLOUD_RUN_EXECUTION", "local-run")
+    owner_id = f"{execution_name}-{uuid.uuid4().hex[:6]}"
+    
+    # Acquire Global Production Lease
+    lease_acquired = False
+    transaction = db.transaction()
+    
+    @firestore.transactional
+    def _acquire(tx):
+        lease_ref = db.collection("scheduler_leases").document("production_lease")
+        snapshot = lease_ref.get(transaction=tx)
+        
+        now = datetime.datetime.now(datetime.UTC)
+        
+        if snapshot.exists:
+            data = snapshot.to_dict()
+            expires_at_str = data.get("expires_at")
+            if expires_at_str:
+                try:
+                    expires_at = datetime.datetime.fromisoformat(expires_at_str)
+                    if expires_at.tzinfo is None:
+                        expires_at = expires_at.replace(tzinfo=datetime.UTC)
+                except Exception:
+                    expires_at = datetime.datetime.min.replace(tzinfo=datetime.UTC)
+            else:
+                expires_at = datetime.datetime.min.replace(tzinfo=datetime.UTC)
+            
+            if now < expires_at:
+                logger.info(f"Lease active: held by {data.get('owner')} until {expires_at.isoformat()}")
+                return False
+            else:
+                logger.warning(f"Lease expired: previous owner {data.get('owner')} expired at {expires_at.isoformat()}. Recovering lease.")
+        
+        expires_at = now + datetime.timedelta(seconds=2100)  # 35 minutes TTL
+        tx.set(lease_ref, {
+            "owner": owner_id,
+            "acquired_at": now.isoformat(),
+            "expires_at": expires_at.isoformat()
+        })
+        return True
 
-    settings_doc = db.collection("automation_settings").document("global").get()
-    if not settings_doc.exists:
-        logger.warning("No global automation settings found.")
-        return {"status": "skipped", "reason": "No automation settings"}
-
-    settings = settings_doc.to_dict()
-    if not settings.get("enabled", False):
-        logger.info("Automation is disabled globally.")
-        return {"status": "skipped", "reason": "Automation disabled"}
-
-    timezone_str = settings.get("timezone", "UTC")
-    publish_windows = settings.get(
-        "publish_windows", ["09:00-11:00", "13:00-15:00", "18:00-21:00"]
-    )
-
-    results = {"scheduled": [], "triggered": [], "published": [], "errors": []}
-
-    # ── STEP 1: READY items → schedule them ──────────────────────────────────
-    ready_items = list(
-        db.collection("content_queue")
-        .where(filter=firestore.FieldFilter("status", "==", "READY"))
-        .stream()
-    )
-    for doc in ready_items:
-        try:
-            item = doc.to_dict()
-            content_id = doc.id
-            brand_id = item["brand_id"]
-
-            content_doc = db.collection("content_items").document(content_id).get()
-            if not content_doc.exists:
-                continue
-
-            c_data = content_doc.to_dict()
-            titles = c_data.get("title_suggestions", [])
-            title = c_data.get("seo_title") or (titles[0] if titles else item.get("topic", "Video Post"))
-            caption = c_data.get("caption") or c_data.get("description", "")
-            hashtags = c_data.get("hashtags", [])
-
-            slot_time = calculate_next_available_slot(
-                db, brand_id, publish_windows, timezone_str
-            )
-
-            post_ref = db.collection("scheduled_posts").document()
-            post_ref.set(
-                {
-                    "content_id": content_id,
-                    "brand_id": brand_id,
-                    "topic": item["topic"],
-                    "platform": "YouTube",
-                    "scheduled_time": slot_time,
-                    "status": "pending",
-                    "created_at": firestore.SERVER_TIMESTAMP,
-                    "ai_title": title,
-                    "ai_caption": caption,
-                    "ai_hashtags": hashtags,
-                    "chosen_title": title,
-                    "chosen_caption": caption,
-                    "chosen_hashtags": hashtags,
-                    "agent_name": c_data.get("agent_name", "Autonomous AI"),
-                    "quality_score": c_data.get("quality_score", 0.9),
-                    "confidence": c_data.get("confidence", 0.9),
-                }
-            )
-
-            db.collection("content_queue").document(content_id).update(
-                {"status": "SCHEDULED", "updated_at": firestore.SERVER_TIMESTAMP}
-            )
-
-            results["scheduled"].append(content_id)
-            logger.info(
-                f"Scheduled content {content_id} for brand {brand_id} at {slot_time}"
-            )
-        except Exception as e:
-            logger.exception(f"Failed to schedule item {doc.id}")
-            results["errors"].append(f"Scheduling error: {e}")
-
-    # ── STEP 2: Trigger new generation runs if quota permits ──────────────────
     try:
-        tz = pytz.timezone(timezone_str)
-    except Exception:
-        tz = pytz.UTC
+        lease_acquired = _acquire(transaction)
+        if lease_acquired:
+            logger.info(f"PRODUCTION_LEASE_ACQUIRED: owner={owner_id}")
+        else:
+            logger.info(f"PRODUCTION_LEASE_DENIED: owner={owner_id}")
+            return {"status": "lease_denied"}
+    except Exception as e:
+        logger.error(f"Error acquiring lease: {e}")
+        return {"status": "lease_error"}
 
-    now = datetime.datetime.now(tz)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    today_end = today_start + datetime.timedelta(days=1)
+    try:
+        goal_engine = GoalEngine()
 
-    brands = list(db.collection("brand_profiles").stream())
-    for brand_doc in brands:
+        # 1. Housekeeping: Find stuck items and fail them
         try:
-            profile = brand_doc.to_dict()
-            brand_id = brand_doc.id
-            strategy = profile.get("topic_strategy", "hybrid")
-            freq = profile.get("publish_frequency_per_day", 1)
+            now = datetime.datetime.utcnow()
+            two_hours_ago_dt = now - datetime.timedelta(hours=2)
 
-            # Count today's scheduled posts
-            existing_today = list(
-                db.collection("scheduled_posts")
-                .where(filter=firestore.FieldFilter("brand_id", "==", brand_id))
-                .where(
-                    filter=firestore.FieldFilter(
-                        "scheduled_time", ">=", today_start
-                    )
-                )
-                .where(
-                    filter=firestore.FieldFilter("scheduled_time", "<", today_end)
-                )
-                .stream()
-            )
+            # Query for items not in terminal states
+            terminal_states = ["COMPLETE", "FAILED", "PUBLIC", "CAPTIONS_VERIFIED", "MEMORY_UPDATED"]
 
-            # Count in-progress items
-            in_progress_statuses = [
-                "QUEUED",
-                "GENERATING",
-                "SCRIPT_READY",
-                "METADATA_READY",
-                "VOICE_READY",
-                "IMAGES_READY",
-                "RENDERING",
-            ]
-            active_queue = []
-            for s in in_progress_statuses:
-                active_queue.extend(
-                    list(
-                        db.collection("content_queue")
-                        .where(
-                            filter=firestore.FieldFilter("brand_id", "==", brand_id)
-                        )
-                        .where(filter=firestore.FieldFilter("status", "==", s))
-                        .stream()
-                    )
-                )
+            query = db.collection("content_items").where("status", "not-in", terminal_states).stream()
 
-            remaining_slots = freq - len(existing_today) - len(active_queue)
-            if remaining_slots <= 0:
+            for doc in query:
+                data = doc.to_dict()
+                created_at = data.get("created_at")
+                created_at_dt = None
+
+                if created_at:
+                    if isinstance(created_at, str):
+                        try:
+                            created_at_dt = datetime.datetime.fromisoformat(
+                                created_at.replace("Z", "+00:00")
+                            ).replace(tzinfo=None)
+                        except Exception:
+                            created_at_dt = None
+                    elif hasattr(created_at, "replace"):
+                        try:
+                            created_at_dt = (
+                                created_at.replace(tzinfo=None)
+                                if getattr(created_at, "tzinfo", None)
+                                else created_at
+                            )
+                        except Exception:
+                            created_at_dt = None
+
+                if created_at_dt and created_at_dt < two_hours_ago_dt:
+                    logger.warning(f"Marking content item {doc.id} as FAILED (stuck > 2 hours)")
+                    doc.reference.update({
+                        "status": "FAILED",
+                        "last_error": "Timeout: stuck in non-terminal state for > 2 hours",
+                        "failed_state": data.get("status"),
+                    })
+
+                # Reset verification flags for items incorrectly marked
+                if data.get("youtube_verified") and not data.get("youtube_video_id"):
+                    doc.reference.update({"youtube_verified": False})
+
+        except Exception as e:
+            logger.error(f"Error during housekeeping: {e}")
+
+
+
+        # 2. Evaluate Goals for Each Brand and Pre-create NEW content_items
+        brand_ids = list(BRAND_REGISTRY.keys())
+        missing_per_brand = {}
+
+        for brand_id in brand_ids:
+            try:
+                counts = goal_engine.count_for_brand(brand_id)
+                missing_per_brand[brand_id] = counts["missing"]
                 logger.info(
-                    f"Brand {brand_id}: no remaining slots today (existing={len(existing_today)}, active={len(active_queue)})."
+                    f"Brand {brand_id}: target={counts['daily_target']}, "
+                    f"verified={counts['verified']}, active={counts['active']}, "
+                    f"missing={counts['missing']}"
                 )
-                continue
+            except Exception as e:
+                logger.error(f"Error computing missing slots for {brand_id}: {e}")
+                missing_per_brand[brand_id] = 0
 
-            logger.info(
-                f"Brand {brand_id} has {remaining_slots} open slot(s) today. Invoking Google Agent..."
-            )
+        # Phase 1: Pre-create NEW content_items for all missing slots
+        import uuid
+        from src.engine.state_machine import ContentState
 
-            # Fetch memory document
-            mem_doc = db.collection("brand_memory").document(brand_id).get()
-            memory_data = mem_doc.to_dict() if mem_doc.exists else {}
+        for brand_id, missing_count in missing_per_brand.items():
+            if missing_count > 0:
+                logger.info(f"Brand {brand_id} has {missing_count} missing daily slots. Pre-creating NEW content_items...")
+                for _ in range(missing_count):
+                    content_id = f"{brand_id}_{uuid.uuid4().hex[:8]}"
+                    doc_ref = db.collection("content_items").document(content_id)
+                    doc_ref.set({
+                        "brand_id": brand_id,
+                        "status": ContentState.NEW.value,
+                        "created_at": datetime.datetime.utcnow().isoformat(),
+                        "retry_count": 0
+                    })
 
-            # Check Editorial Calendar if strategy is hybrid/calendar
-            calendar_topic = None
-            if strategy in ["calendar", "hybrid"]:
-                calendar_items = list(
-                    db.collection("editorial_calendar")
-                    .where(filter=firestore.FieldFilter("brand", "==", brand_id))
-                    .where(
-                        filter=firestore.FieldFilter("processed", "==", False)
-                    )
-                    .order_by("date", direction=firestore.Query.ASCENDING)
-                    .limit(1)
-                    .stream()
-                )
-                if calendar_items:
-                    cal_doc = calendar_items[0]
-                    calendar_topic = cal_doc.to_dict().get("topic")
-                    db.collection("editorial_calendar").document(
-                        cal_doc.id
-                    ).update(
-                        {
-                            "processed": True,
-                            "status": "processed",
-                            "updated_at": firestore.SERVER_TIMESTAMP,
-                        }
-                    )
-                    logger.info(f"Retrieved assignment from calendar: '{calendar_topic}'")
-
-            # Invoke Agent with up to 2 retries if verification fails
-            agent_package = None
-            verification_res = None
-
-            for attempt in range(2):
-                package = agent_client.invoke_agent(
-                    brand_id=brand_id,
-                    brand_profile=profile,
-                    brand_memory=memory_data,
-                    calendar_topic=calendar_topic,
-                )
-                v_res = verifier.verify_decision(package, profile, memory_data)
-                if v_res.passed:
-                    agent_package = package
-                    verification_res = v_res
-                    break
-                logger.warning(
-                    f"Attempt {attempt+1}: Verification rejected package ({v_res.reason}). Retrying..."
-                )
-
-            if not agent_package or not verification_res or not verification_res.passed:
-                logger.error(f"Abandoning generation for brand {brand_id}: Verification failed after retries.")
-                results["errors"].append(f"Brand {brand_id}: Verification failed ({verification_res.reason if verification_res else 'Unknown'})")
-                continue
-
-            topic = agent_package.get("topic")
-            source = "calendar" if calendar_topic else "agent"
-            content_id = f"auto_{brand_id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
-            # Store rich decision package in content_items
-            db.collection("content_items").document(content_id).set(
-                {
-                    "brand_id": brand_id,
-                    "topic": topic,
-                    "status": "draft",
-                    "source": source,
-                    "agent_name": agent_package.get("agent_name"),
-                    "category": agent_package.get("category"),
-                    "editorial_reasoning": agent_package.get("editorial_reasoning"),
-                    "confidence": agent_package.get("confidence"),
-                    "quality_score": agent_package.get("quality_score"),
-                    "verification_status": verification_res.status,
-                    "verification_sources": agent_package.get("verification_sources", []),
-                    "similarity_score": verification_res.metrics.get("effective_similarity"),
-                    "seo_title": agent_package.get("seo_title"),
-                    "caption": agent_package.get("description"),
-                    "hashtags": agent_package.get("hashtags", []),
-                    "cta": agent_package.get("cta"),
-                    "script": agent_package.get("script_narration"),
-                    "scene_plan": agent_package.get("scene_plan", []),
-                    "created_at": firestore.SERVER_TIMESTAMP,
-                    "updated_at": firestore.SERVER_TIMESTAMP,
-                }
-            )
-
-            db.collection("content_queue").document(content_id).set(
-                {
-                    "brand_id": brand_id,
-                    "topic": topic,
-                    "status": "QUEUED",
-                    "source": source,
-                    "agent_name": agent_package.get("agent_name"),
-                    "quality_score": agent_package.get("quality_score"),
-                    "created_at": firestore.SERVER_TIMESTAMP,
-                    "updated_at": firestore.SERVER_TIMESTAMP,
-                }
-            )
-
-            trigger_pipeline_job(brand_id, topic, content_id)
-            results["triggered"].append(content_id)
-            logger.info(
-                f"Triggered pipeline run for {content_id} via {agent_package.get('agent_name')} (topic: '{topic}')"
-            )
-
-        except Exception as e:
-            logger.exception(f"Failed to process brand {brand_doc.id}")
-            results["errors"].append(f"Brand generation error: {e}")
-
-    # ── STEP 3: Auto-publish due posts ────────────────────────────────────────
-    now_utc = datetime.datetime.now(pytz.UTC)
-    due_posts = list(
-        db.collection("scheduled_posts")
-        .where(filter=firestore.FieldFilter("status", "==", "pending"))
-        .where(
-            filter=firestore.FieldFilter("scheduled_time", "<=", now_utc)
-        )
-        .stream()
-    )
-
-    for doc in due_posts:
+        # Phase 1b: Recovery of interrupted states (RENDERING, UPLOADING)
         try:
-            item = doc.to_dict()
-            post_id = doc.id
-            content_id = item["content_id"]
-            brand_id = item["brand_id"]
+            now = datetime.datetime.utcnow()
+            forty_five_mins_ago = now - datetime.timedelta(minutes=45)
+            
+            query = db.collection("content_items").where("status", "in", ["RENDERING", "UPLOADING"]).stream()
+            for doc in query:
+                data = doc.to_dict()
+                updated_at_str = data.get("updated_at")
+                updated_at = None
+                if updated_at_str:
+                    try:
+                        updated_at = datetime.datetime.fromisoformat(updated_at_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                    except Exception:
+                        pass
+                if not updated_at:
+                    created_at = data.get("created_at")
+                    if created_at:
+                        if isinstance(created_at, str):
+                            try:
+                                updated_at = datetime.datetime.fromisoformat(created_at.replace("Z", "+00:00")).replace(tzinfo=None)
+                            except Exception:
+                                pass
+                        elif hasattr(created_at, "replace"):
+                            try:
+                                updated_at = created_at.replace(tzinfo=None)
+                            except Exception:
+                                pass
 
-            content_doc = db.collection("content_items").document(content_id).get()
-            if not content_doc.exists:
-                continue
-
-            c_data = content_doc.to_dict()
-            video_uri = c_data.get("final_video_uri")
-            srt_uri = c_data.get("srt_uri")
-
-            title = item.get("chosen_title") or item.get("ai_title")
-            description = item.get("chosen_caption") or item.get("ai_caption")
-            hashtags = item.get("chosen_hashtags") or item.get("ai_hashtags", [])
-
-            logger.info(
-                f"Auto-publishing post {post_id} (content: {content_id}) to YouTube..."
-            )
-            youtube_url = upload_video(
-                channel=brand_id,
-                content_id=content_id,
-                video_gs_uri=video_uri,
-                title=title,
-                description=description,
-                hashtags=hashtags,
-                srt_gs_uri=srt_uri,
-            )
-
-            db.collection("scheduled_posts").document(post_id).update(
-                {
-                    "status": "posted",
-                    "youtube_url": youtube_url,
-                    "posted_at": firestore.SERVER_TIMESTAMP,
-                }
-            )
-            db.collection("content_queue").document(content_id).set(
-                {"status": "PUBLISHED", "updated_at": firestore.SERVER_TIMESTAMP},
-                merge=True
-            )
-
-            results["published"].append(content_id)
-            logger.info(
-                f"Auto-published post {post_id} → {youtube_url}"
-            )
+                if updated_at and updated_at < forty_five_mins_ago:
+                    status = data.get("status")
+                    logger.warning(f"Recovering stuck item {doc.id} (status={status}, last updated at {updated_at.isoformat()})")
+                    
+                    if status == "RENDERING":
+                        final_uri = data.get("final_video_uri")
+                        exists = False
+                        if final_uri and final_uri.startswith("gs://"):
+                            try:
+                                from google.cloud import storage
+                                storage_client = storage.Client()
+                                bucket_name = final_uri.split("/")[2]
+                                blob_name = "/".join(final_uri.split("/")[3:])
+                                bucket = storage_client.bucket(bucket_name)
+                                blob = bucket.blob(blob_name)
+                                exists = blob.exists()
+                            except Exception as gcs_err:
+                                logger.error(f"Error checking GCS for {final_uri}: {gcs_err}")
+                        
+                        if exists:
+                            logger.info(f"Interrupted render recovery: GCS artifact exists for {doc.id}. Setting status to RENDERED.")
+                            doc.reference.update({
+                                "status": "RENDERED",
+                                "updated_at": datetime.datetime.utcnow().isoformat()
+                            })
+                        else:
+                            logger.info(f"Interrupted render recovery: GCS artifact absent for {doc.id}. Rolling back to ASSETS_READY.")
+                            doc.reference.update({
+                                "status": "ASSETS_READY",
+                                "updated_at": datetime.datetime.utcnow().isoformat()
+                            })
+                            
+                    elif status == "UPLOADING":
+                        yt_id = data.get("youtube_video_id")
+                        if yt_id:
+                            logger.info(f"Interrupted upload recovery: YouTube video ID exists for {doc.id}. Recovering to PUBLIC.")
+                            doc.reference.update({
+                                "status": "PUBLIC",
+                                "updated_at": datetime.datetime.utcnow().isoformat()
+                            })
+                        else:
+                            logger.info(f"Interrupted upload recovery: YouTube video ID absent for {doc.id}. Rolling back to RENDERED.")
+                            doc.reference.update({
+                                "status": "RENDERED",
+                                "updated_at": datetime.datetime.utcnow().isoformat()
+                            })
         except Exception as e:
-            logger.exception(f"Failed to auto-publish post {doc.id}")
-            results["errors"].append(f"Auto-publish error: {e}")
+            logger.error(f"Error during interrupted state recovery: {e}")
 
-    return results
+        # Phase 2: Select the next active, incomplete content_item (round-robin)
+        today_date = datetime.datetime.now(datetime.UTC).date()
+        docs = list(db.collection("content_items").stream())
+        
+        candidates = []
+        for doc in docs:
+            d = doc.to_dict()
+            created_date = GoalEngine.normalize_to_date(d.get("created_at"))
+            if created_date != today_date:
+                continue
+            status = d.get("status")
+            if status in ["COMPLETE", "FAILED"]:
+                continue
+                
+            is_locked = False
+            if status in ["RENDERING", "UPLOADING", "PUBLIC", "CAPTIONS_VERIFIED", "MEMORY_UPDATED"]:
+                updated_at_str = d.get("updated_at")
+                updated_at = None
+                if updated_at_str:
+                    try:
+                        updated_at = datetime.datetime.fromisoformat(updated_at_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                    except Exception:
+                        pass
+                if not updated_at:
+                    created_at = d.get("created_at")
+                    if created_at:
+                        if isinstance(created_at, str):
+                            try:
+                                updated_at = datetime.datetime.fromisoformat(created_at.replace("Z", "+00:00")).replace(tzinfo=None)
+                            except Exception:
+                                pass
+                        elif hasattr(created_at, "replace"):
+                            try:
+                                updated_at = created_at.replace(tzinfo=None)
+                            except Exception:
+                                pass
+                if updated_at and (datetime.datetime.utcnow() - updated_at) < datetime.timedelta(minutes=45):
+                    is_locked = True
+                    
+            if not is_locked:
+                candidates.append((doc.id, d))
+
+        # Group by brand
+        brand_groups = {}
+        for b_id in brand_ids:
+            brand_groups[b_id] = []
+            
+        for cid, d in candidates:
+            bid = d.get("brand_id")
+            if bid in brand_groups:
+                brand_groups[bid].append((cid, d))
+                
+        # Sort each group by created_at (FIFO)
+        for b_id in brand_groups:
+            brand_groups[b_id].sort(key=lambda x: x[1].get("created_at", ""))
+            
+        # Interleave
+        interleaved = []
+        max_len = max(len(brand_groups[b_id]) for b_id in brand_groups) if brand_groups else 0
+        for i in range(max_len):
+            for b_id in sorted(brand_groups.keys()):
+                if i < len(brand_groups[b_id]):
+                    interleaved.append(brand_groups[b_id][i])
+                    
+        selected_item = interleaved[0] if interleaved else None
+        
+        # Claim the selected item in Firestore BEFORE releasing the global lease
+        if selected_item:
+            selected_id, selected_data = selected_item
+            current_status = selected_data.get("status")
+            
+            next_lock_state = "RENDERING"
+            if current_status == "RENDERED":
+                next_lock_state = "UPLOADING"
+            elif current_status in ["PUBLIC", "CAPTIONS_VERIFIED", "MEMORY_UPDATED"]:
+                next_lock_state = "PUBLIC"
+            elif current_status == "RETRY":
+                failed_state = selected_data.get("failed_state")
+                if failed_state in ["PUBLIC", "CAPTIONS_VERIFIED", "MEMORY_UPDATED"]:
+                    next_lock_state = "PUBLIC"
+                elif failed_state == "UPLOADING":
+                    next_lock_state = "UPLOADING"
+                else:
+                    next_lock_state = "RENDERING"
+                    
+            logger.info(f"Claiming selected item {selected_id}: transitioning {current_status} -> {next_lock_state}")
+            try:
+                db.collection("content_items").document(selected_id).update({
+                    "status": next_lock_state,
+                    "updated_at": datetime.datetime.utcnow().isoformat()
+                })
+            except Exception as claim_err:
+                logger.error(f"Failed to write claim state for {selected_id}: {claim_err}")
+                selected_item = None
+        
+        # Release global lease before dispatching
+        if lease_acquired:
+            release_transaction = db.transaction()
+            
+            @firestore.transactional
+            def _release(tx):
+                lease_ref = db.collection("scheduler_leases").document("production_lease")
+                snapshot = lease_ref.get(transaction=tx)
+                if snapshot.exists:
+                    data = snapshot.to_dict()
+                    if data.get("owner") == owner_id:
+                        tx.delete(lease_ref)
+                        return True
+                return False
+                
+            try:
+                success = _release(release_transaction)
+                if success:
+                    logger.info(f"PRODUCTION_LEASE_RELEASED: owner={owner_id}")
+                    lease_acquired = False
+                else:
+                    logger.warning("Failed to release lease during early release: owner mismatch or lease does not exist.")
+            except Exception as e:
+                logger.error(f"Error during early release of lease: {e}")
+
+        # Dispatch the worker
+        if selected_item:
+            selected_id, selected_data = selected_item
+            brand_id = selected_data.get("brand_id")
+            topic = selected_data.get("topic", "")
+            logger.info(f"DISPATCHING_WORKER: brand={brand_id}, content_id={selected_id}, topic={topic}")
+            try:
+                from src.job_trigger import trigger_pipeline_job
+                execution_name = trigger_pipeline_job(brand_id, topic, selected_id)
+                logger.info(f"Successfully triggered media-pipeline execution: {execution_name}")
+            except Exception as trigger_err:
+                logger.error(f"Failed to trigger media-pipeline job: {trigger_err}")
+        else:
+            logger.info("No active, dispatchable content items found.")
+
+    except Exception as e:
+        logger.error(f"Error in scheduler execution: {e}")
+        return {"status": "error", "message": str(e)}
+    finally:
+        if lease_acquired:
+            # Release lease
+            release_transaction = db.transaction()
+            
+            @firestore.transactional
+            def _release(tx):
+                lease_ref = db.collection("scheduler_leases").document("production_lease")
+                snapshot = lease_ref.get(transaction=tx)
+                if snapshot.exists:
+                    data = snapshot.to_dict()
+                    if data.get("owner") == owner_id:
+                        tx.delete(lease_ref)
+                        return True
+                return False
+                
+            try:
+                success = _release(release_transaction)
+                if success:
+                    logger.info(f"PRODUCTION_LEASE_RELEASED: owner={owner_id}")
+                else:
+                    logger.warning(f"Failed to release lease: owner mismatch or lease does not exist.")
+            except Exception as e:
+                logger.error(f"Error releasing lease: {e}")
+
+    logger.info("Scheduler execution completed.")
+    return {"status": "success"}
 
 
 if __name__ == "__main__":
-    res = run_scheduler()
-    print(json.dumps(res, indent=2))
+    run_scheduler()
