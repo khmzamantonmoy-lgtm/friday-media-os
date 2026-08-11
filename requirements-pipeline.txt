@@ -1,0 +1,14 @@
+google-genai==0.3.0
+google-cloud-firestore==2.19.0
+google-cloud-storage==2.18.2
+google-cloud-texttospeech==2.21.0
+google-cloud-aiplatform>=1.60.0
+moviepy==1.0.3
+imageio-ffmpeg==0.5.1
+google-auth-oauthlib
+google-auth>=2.29.0
+google-api-python-client
+google-cloud-secret-manager
+google-cloud-run
+pytz
+chromadb>=0.5.0
