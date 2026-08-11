@@ -180,3 +180,136 @@ Generate a complete, verified editorial decision package. Return JSON matching t
                 "script_narration": f"Welcome to {brand_profile.get('display_name', brand_id)}. Today we discuss {fallback_topic}.",
                 "scene_plan": [],
             }
+
+    def invoke_agent_with_brief(
+        self,
+        brand_id: str,
+        brand_profile: dict,
+        brand_memory: dict,
+        brief,  # src.atlas.models.ContentBrief
+    ) -> dict:
+        """
+        ATLAS-aware specialist invocation.
+
+        Injects a structured ContentBrief as a strategic advisory block into the
+        existing user prompt. The specialist's system_instruction is NEVER modified.
+        The specialist retains full editorial autonomy over execution; the brief
+        provides strategic context without contaminating channel identity.
+        """
+        agent_info = AGENT_MAPPING.get(
+            brand_id,
+            {
+                "agent_name": f"{brand_id.title()} Editorial AI",
+                "role": "Content Strategist",
+                "system_instruction": (
+                    f"You are the autonomous content agent for "
+                    f"{brand_profile.get('display_name', brand_id)}."
+                ),
+                "fallback_topics": ["General Topic"],
+            },
+        )
+
+        recent_topics = brand_memory.get("recent_topics", [])
+        recent_titles = brand_memory.get("recent_titles", [])
+        recent_keywords = brand_memory.get("recent_keywords", [])
+        last_200 = brand_memory.get("last_200_videos", [])
+
+        # Build a safe, read-only brief summary from the ContentBrief dataclass
+        brief_dict = brief.to_dict() if hasattr(brief, "to_dict") else vars(brief)
+        atlas_advisory = (
+            "═══════════════════════════════════════════════════════════\n"
+            "ATLAS STRATEGIC BRIEF (Advisory — Do NOT alter your editorial voice)\n"
+            "═══════════════════════════════════════════════════════════\n"
+            f"Objective          : {brief_dict.get('objective', '')}\n"
+            f"Portfolio Category : {brief_dict.get('portfolio_category', '')}\n"
+            f"Core Insight       : {brief_dict.get('core_insight', '')}\n"
+            f"Hook Direction     : {brief_dict.get('hook_direction', '')}\n"
+            f"Emotional Trigger  : {brief_dict.get('emotional_trigger', '')}\n"
+            f"Narrative Structure: {brief_dict.get('narrative_structure', '')}\n"
+            f"Target Audience    : {brief_dict.get('target_audience', '')}\n"
+            f"Target Geography   : {brief_dict.get('target_geography', 'US')}\n"
+            f"US Discovery Terms : {', '.join(brief_dict.get('discovery_terms', []))}\n"
+            f"Topic Direction    : {brief_dict.get('topic', '')}\n"
+            f"Title Direction    : {brief_dict.get('title_direction', '')}\n"
+            "═══════════════════════════════════════════════════════════\n"
+            "You may refine or expand on this brief. Your system prompt, brand "
+            "identity, editorial rules, and content pillars govern execution.\n"
+        )
+
+        prompt = f"""\
+Agent: {agent_info['agent_name']} ({agent_info['role']})
+
+{atlas_advisory}
+
+BRAND IDENTITY:
+- Display Name: {brand_profile.get('display_name', brand_id)}
+- Target Audience: {brand_profile.get('audience', '')}
+- Tone: {brand_profile.get('tone', '')}
+- Angle: {brand_profile.get('content_angle', '')}
+- Categories: {brand_profile.get('categories', [])}
+- Avoid Topics: {brand_profile.get('avoid_topics', [])}
+- Preferred Duration: {brand_profile.get('preferred_video_duration', 30)} seconds
+
+EDITORIAL MEMORY & HISTORY:
+- Recent Topics (Do NOT repeat): {json.dumps(recent_topics[-30:])}
+- Recent Titles: {json.dumps(recent_titles[-30:])}
+- Recent Keywords: {json.dumps(recent_keywords[-50:])}
+- Total Published History Count: {len(last_200)}
+
+REQUIREMENTS:
+Generate a complete, verified editorial decision package. Return JSON matching this exact structure:
+{{
+    "agent_name": "{agent_info['agent_name']}",
+    "topic": "Concise topic title (max 80 chars)",
+    "category": "Primary category",
+    "editorial_reasoning": "Detailed breakdown of why this topic was chosen and why it will perform well",
+    "is_breaking_news": false,
+    "confidence": 0.95,
+    "quality_score": 0.92,
+    "verification_status": "verified",
+    "verification_sources": ["Official Documentation", "Industry Standard"],
+    "similarity_score": 0.05,
+    "seo_title": "Engaging Click-Worthy Title",
+    "description": "Full YouTube video description with CTA and outline",
+    "hashtags": ["#tag1", "#tag2", "#tag3"],
+    "cta": "Subscribe for more insights",
+    "script_narration": "Full narration script for TTS text-to-speech audio",
+    "scene_plan": [
+        {{"scene_id": 1, "duration": 5, "visual_prompt": "detailed image prompt", "text_overlay": "scene title"}},
+        {{"scene_id": 2, "duration": 10, "visual_prompt": "detailed image prompt", "text_overlay": "key takeaway"}},
+        {{"scene_id": 3, "duration": 10, "visual_prompt": "detailed image prompt", "text_overlay": "summary"}},
+        {{"scene_id": 4, "duration": 5, "visual_prompt": "detailed image prompt", "text_overlay": "call to action"}}
+    ]
+}}
+"""
+
+        def op(client):
+            return client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=agent_info["system_instruction"],
+                    response_mime_type="application/json",
+                    temperature=0.7,
+                ),
+            )
+
+        error_msg = "Unknown error"
+        try:
+            response = self.key_manager.execute(op)
+            data = json.loads(response.text)
+            data["agent_name"] = agent_info["agent_name"]
+            data["atlas_brief_id"] = brief_dict.get("request_id", "")
+            return data
+        except Exception as e:
+            logger.exception(f"[ATLAS] invoke_agent_with_brief failed for {brand_id} after failover")
+            error_msg = str(e)
+
+        # Fallback: delegate to standard invoke_agent with topic from brief
+        logger.warning(f"[ATLAS] Falling back to standard invoke_agent for {brand_id}")
+        return self.invoke_agent(
+            brand_id,
+            brand_profile,
+            brand_memory,
+            calendar_topic=brief_dict.get("topic"),
+        )

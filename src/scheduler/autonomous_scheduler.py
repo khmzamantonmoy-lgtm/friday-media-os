@@ -294,11 +294,22 @@ def run_scheduler() -> dict:
         for b_id in brand_groups:
             brand_groups[b_id].sort(key=lambda x: x[1].get("created_at", ""))
             
-        # Interleave
+        # Read round-robin cursor to rotate brand ordering across runs
+        cursor_doc = db.collection("scheduler_leases").document("round_robin_cursor").get()
+        last_brand = cursor_doc.to_dict().get("last_dispatched_brand") if cursor_doc.exists else None
+
+        all_brand_ids = sorted(brand_groups.keys())
+        if last_brand in all_brand_ids:
+            idx = all_brand_ids.index(last_brand)
+            rotated_order = all_brand_ids[idx+1:] + all_brand_ids[:idx+1]
+        else:
+            rotated_order = all_brand_ids
+
+        # Interleave using rotated brand order
         interleaved = []
         max_len = max(len(brand_groups[b_id]) for b_id in brand_groups) if brand_groups else 0
         for i in range(max_len):
-            for b_id in sorted(brand_groups.keys()):
+            for b_id in rotated_order:
                 if i < len(brand_groups[b_id]):
                     interleaved.append(brand_groups[b_id][i])
                     
@@ -332,6 +343,15 @@ def run_scheduler() -> dict:
             except Exception as claim_err:
                 logger.error(f"Failed to write claim state for {selected_id}: {claim_err}")
                 selected_item = None
+
+            if selected_item:
+                try:
+                    db.collection("scheduler_leases").document("round_robin_cursor").set({
+                        "last_dispatched_brand": selected_data.get("brand_id"),
+                        "updated_at": datetime.datetime.utcnow().isoformat()
+                    })
+                except Exception as cursor_err:
+                    logger.warning(f"Failed to update round-robin cursor (non-fatal): {cursor_err}")
         
         # Release global lease before dispatching
         if lease_acquired:

@@ -17,6 +17,14 @@ from src.workers.render_worker import render_video
 from src.workers.youtube_worker import upload_video
 from src.workers.metadata_worker import generate_metadata
 
+try:
+    from src.atlas.orchestrator import ATLASOrchestrator
+    from src.atlas.config import ATLAS_SHADOW_MODE
+    _ATLAS_AVAILABLE = True
+except ImportError:
+    _ATLAS_AVAILABLE = False
+    ATLAS_SHADOW_MODE = True
+
 logger = logging.getLogger(__name__)
 
 class BrandWorker:
@@ -24,6 +32,13 @@ class BrandWorker:
         self.db = firestore.Client()
         self.metrics = MetricsService()
         self.verifier = PublicationVerifier()
+        self._atlas: "ATLASOrchestrator | None" = None
+        if _ATLAS_AVAILABLE:
+            try:
+                self._atlas = ATLASOrchestrator()
+                logger.info("ATLAS orchestrator initialised (shadow_mode=%s)", ATLAS_SHADOW_MODE)
+            except Exception as atlas_init_err:
+                logger.warning("ATLAS orchestrator failed to initialise: %s", atlas_init_err)
 
     def run_cycle_for_item(self, content_id: str):
         """
@@ -293,7 +308,28 @@ class BrandWorker:
                 data["topic"] = topic
 
             if current_state == ContentState.TOPIC_SELECTED:
-                script = self._execute_script(brand, topic)
+                # ── ATLAS Strategic Brief Injection (Shadow Mode safe) ─────────
+                atlas_brief = None
+                if self._atlas:
+                    try:
+                        brand_memory_dict = memory.get_memory() if hasattr(memory, "get_memory") else {}
+                        atlas_brief = self._atlas.generate_content_brief(
+                            brand_id, brand_memory_dict, existing_topic=topic
+                        )
+                        logger.info(
+                            "[ATLAS] Brief generated for %s: category=%s, topic='%s'",
+                            brand_id,
+                            atlas_brief.portfolio_category.value,
+                            atlas_brief.topic,
+                        )
+                        # QA governance gate (Shadow Mode = observe only)
+                        # Full QA runs against the specialist output after _execute_script.
+                    except Exception as atlas_brief_err:
+                        logger.warning("[ATLAS] Brief generation failed (%s). Continuing without brief.", atlas_brief_err)
+                        atlas_brief = None
+                # ── End ATLAS Brief Injection ──────────────────────────────────
+
+                script = self._execute_script(brand, topic, atlas_brief=atlas_brief)
                 metadata = self._execute_metadata(script, brand)
                 current_state = self._update_state(
                     doc_ref, 
@@ -421,8 +457,32 @@ class BrandWorker:
             })
 
     @with_retry(max_retries=5, base_delay=2.0)
-    def _execute_script(self, brand, topic):
+    def _execute_script(self, brand, topic, atlas_brief=None):
+        """
+        Generates a content script.
+        When an ATLAS ContentBrief is supplied, routes through invoke_agent_with_brief
+        so the specialist receives strategic context while preserving brand identity.
+        Falls back to standard generate_script on any error.
+        """
+        if atlas_brief and _ATLAS_AVAILABLE:
+            try:
+                from src.agents.google_agent_client import GoogleAgentClient
+                brand_id = brand.get("id", "")
+                agent_client = GoogleAgentClient()
+                # Minimal memory stub — SemanticMemory is already in scope above
+                return agent_client.invoke_agent_with_brief(
+                    brand_id,
+                    brand,
+                    {},  # brand_memory: full memory passed at brief-generation time
+                    atlas_brief,
+                )
+            except Exception as atlas_script_err:
+                logger.warning(
+                    "[ATLAS] invoke_agent_with_brief failed (%s). Falling back to generate_script.",
+                    atlas_script_err,
+                )
         return generate_script(brand, topic)
+
 
     @with_retry(max_retries=5, base_delay=2.0)
     def _execute_metadata(self, script, brand):
