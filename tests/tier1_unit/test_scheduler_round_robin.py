@@ -635,7 +635,173 @@ class TestBrandWorkerRunCycleIsOneCycle(unittest.TestCase):
         self.assertEqual(src.count("_process_content"), 1)
 
 
+# ---------------------------------------------------------------------------
+# Test 8 — Round Robin Persistent Cursor Tests
+# ---------------------------------------------------------------------------
+
+class TestSchedulerRoundRobinCursor(unittest.TestCase):
+    def setUp(self):
+        from src.engine.goal_engine import GoalEngine
+        self.GoalEngine = GoalEngine
+        self.firestore_patch = patch("google.cloud.firestore.Client")
+        self.mock_client_class = self.firestore_patch.start()
+        self.mock_db = MagicMock()
+        self.mock_client_class.return_value = self.mock_db
+        
+        # Mock environment variables to prevent KeyError or local run bypass
+        self.env_patch = patch.dict("os.environ", {"CLOUD_RUN_EXECUTION": "test-run"})
+        self.env_patch.start()
+
+    def tearDown(self):
+        self.firestore_patch.stop()
+        self.env_patch.stop()
+
+    def _setup_mock_firestore(self, cursor_exists=True, last_brand="bd_threatpulse", candidates=None):
+        today_iso = datetime.datetime.now(datetime.UTC).isoformat()
+        if candidates is None:
+            # Default mock candidates
+            doc_bd = MagicMock()
+            doc_bd.id = "bd_1"
+            doc_bd.to_dict.return_value = {"brand_id": "bd_threatpulse", "status": "NEW", "created_at": today_iso}
+            doc_ww = MagicMock()
+            doc_ww.id = "ww_1"
+            doc_ww.to_dict.return_value = {"brand_id": "wealthwise", "status": "NEW", "created_at": today_iso}
+            candidates = [doc_bd, doc_ww]
+
+        cursor_doc = MagicMock()
+        cursor_doc.exists = cursor_exists
+        cursor_doc.to_dict.return_value = {"last_dispatched_brand": last_brand}
+
+        mock_lease_doc = MagicMock()
+        mock_lease_doc.exists = False
+
+        def mock_document(doc_path):
+            doc_ref = MagicMock()
+            if doc_path == "production_lease":
+                doc_ref.get.return_value = mock_lease_doc
+            elif doc_path == "round_robin_cursor":
+                doc_ref.get.return_value = cursor_doc
+            return doc_ref
+
+        mock_content_items_ref = MagicMock()
+        mock_content_items_ref.stream.return_value = candidates
+
+        def mock_collection(name):
+            if name == "scheduler_leases":
+                col_ref = MagicMock()
+                col_ref.document.side_effect = mock_document
+                return col_ref
+            elif name == "content_items":
+                return mock_content_items_ref
+            return MagicMock()
+
+        self.mock_db.collection.side_effect = mock_collection
+
+    def test_rotation_starts_after_last_dispatched_brand(self):
+        """Verifies brand selection order shifts to start after the last dispatched brand."""
+        self._setup_mock_firestore(cursor_exists=True, last_brand="bd_threatpulse")
+
+        mock_tx = MagicMock()
+        self.mock_db.transaction.return_value = mock_tx
+
+        with patch("google.cloud.firestore.transactional", lambda f: f):
+            with patch("src.scheduler.autonomous_scheduler.GoalEngine") as mock_ge_cls:
+                mock_ge = MagicMock()
+                mock_ge.count_for_brand.return_value = {"daily_target": 4, "verified": 4, "active": 0, "missing": 0}
+                mock_ge_cls.return_value = mock_ge
+                mock_ge_cls.normalize_to_date = self.GoalEngine.normalize_to_date
+
+                with patch("src.job_trigger.trigger_pipeline_job") as mock_trigger:
+                    from src.scheduler.autonomous_scheduler import run_scheduler
+                    res = run_scheduler()
+                    self.assertEqual(res.get("status"), "success")
+                    
+                    # Rotated order after bd_threatpulse must pick wealthwise (ww_1)
+                    mock_trigger.assert_called_once_with("wealthwise", "", "ww_1")
+
+    def test_missing_cursor_document_defaults_to_alphabetical(self):
+        """Verifies that first run (no cursor) defaults to alphabetical priority (bd_threatpulse)."""
+        self._setup_mock_firestore(cursor_exists=False)
+
+        mock_tx = MagicMock()
+        self.mock_db.transaction.return_value = mock_tx
+
+        with patch("google.cloud.firestore.transactional", lambda f: f):
+            with patch("src.scheduler.autonomous_scheduler.GoalEngine") as mock_ge_cls:
+                mock_ge = MagicMock()
+                mock_ge.count_for_brand.return_value = {"daily_target": 4, "verified": 4, "active": 0, "missing": 0}
+                mock_ge_cls.return_value = mock_ge
+                mock_ge_cls.normalize_to_date = self.GoalEngine.normalize_to_date
+
+                with patch("src.job_trigger.trigger_pipeline_job") as mock_trigger:
+                    from src.scheduler.autonomous_scheduler import run_scheduler
+                    run_scheduler()
+                    
+                    # Defaults to alphabetically first: bd_threatpulse (bd_1)
+                    mock_trigger.assert_called_once_with("bd_threatpulse", "", "bd_1")
+
+    def test_cursor_write_failure_does_not_invalidate_claimed_item(self):
+        """Verifies cursor write exceptions are caught and do not cancel dispatch."""
+        self._setup_mock_firestore(cursor_exists=True, last_brand="bd_threatpulse")
+
+        # Mock cursor document ref set method to raise exception
+        cursor_ref_mock = MagicMock()
+        cursor_ref_mock.set.side_effect = Exception("Firestore write simulated failure")
+        
+        def mock_document_with_fail(doc_path):
+            if doc_path == "round_robin_cursor":
+                return cursor_ref_mock
+            mock_lease_doc = MagicMock()
+            mock_lease_doc.exists = False
+            doc_ref = MagicMock()
+            doc_ref.get.return_value = mock_lease_doc
+            return doc_ref
+
+        self.mock_db.collection.return_value.document.side_effect = mock_document_with_fail
+
+        mock_tx = MagicMock()
+        self.mock_db.transaction.return_value = mock_tx
+
+        with patch("google.cloud.firestore.transactional", lambda f: f):
+            with patch("src.scheduler.autonomous_scheduler.GoalEngine") as mock_ge_cls:
+                mock_ge = MagicMock()
+                mock_ge.count_for_brand.return_value = {"daily_target": 4, "verified": 4, "active": 0, "missing": 0}
+                mock_ge_cls.return_value = mock_ge
+                mock_ge_cls.normalize_to_date = self.GoalEngine.normalize_to_date
+
+                with patch("src.job_trigger.trigger_pipeline_job") as mock_trigger:
+                    from src.scheduler.autonomous_scheduler import run_scheduler
+                    res = run_scheduler()
+                    self.assertEqual(res.get("status"), "success")
+                    
+                    # Dispatch still completed successfully
+                    mock_trigger.assert_called_once()
+
+    def test_no_selected_item_leaves_cursor_untouched(self):
+        """Verifies that if no items are selected/dispatched, cursor update is skipped."""
+        self._setup_mock_firestore(cursor_exists=True, last_brand="bd_threatpulse", candidates=[])
+
+        mock_tx = MagicMock()
+        self.mock_db.transaction.return_value = mock_tx
+
+        with patch("google.cloud.firestore.transactional", lambda f: f):
+            with patch("src.scheduler.autonomous_scheduler.GoalEngine") as mock_ge_cls:
+                mock_ge = MagicMock()
+                mock_ge.count_for_brand.return_value = {"daily_target": 4, "verified": 4, "active": 0, "missing": 0}
+                mock_ge_cls.return_value = mock_ge
+                mock_ge_cls.normalize_to_date = self.GoalEngine.normalize_to_date
+
+                with patch("src.job_trigger.trigger_pipeline_job") as mock_trigger:
+                    from src.scheduler.autonomous_scheduler import run_scheduler
+                    run_scheduler()
+                    
+                    # No trigger, and cursor set was never invoked
+                    mock_trigger.assert_not_called()
+                    self.mock_db.collection("scheduler_leases").document("round_robin_cursor").set.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
+
 
 

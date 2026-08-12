@@ -239,6 +239,29 @@ def run_scheduler() -> dict:
             logger.error(f"Error during interrupted state recovery: {e}")
 
         # Phase 2: Select the next active, incomplete content_item (round-robin)
+        # Read round-robin cursor state from Firestore
+        last_dispatched_brand = None
+        try:
+            cursor_ref = db.collection("scheduler_leases").document("round_robin_cursor")
+            cursor_doc = cursor_ref.get()
+            if cursor_doc.exists:
+                last_dispatched_brand = cursor_doc.to_dict().get("last_dispatched_brand")
+                logger.info(f"Loaded round-robin cursor: last_dispatched_brand={last_dispatched_brand}")
+            else:
+                logger.info("Round-robin cursor document does not exist. Defaulting to None.")
+        except Exception as cursor_read_err:
+            logger.warning(f"Failed to read round-robin cursor state: {cursor_read_err}. Defaulting to None.")
+
+        # Build rotated brand order for interleaving
+        sorted_brands = sorted(brand_ids)
+        rotated_order = list(sorted_brands)
+        if last_dispatched_brand in sorted_brands:
+            idx = sorted_brands.index(last_dispatched_brand)
+            rotated_order = sorted_brands[idx+1:] + sorted_brands[:idx+1]
+            logger.info(f"Rotated brand order starting after '{last_dispatched_brand}': {rotated_order}")
+        else:
+            logger.info(f"Using default alphabetical brand order: {rotated_order}")
+
         today_date = datetime.datetime.now(datetime.UTC).date()
         docs = list(db.collection("content_items").stream())
         
@@ -298,7 +321,7 @@ def run_scheduler() -> dict:
         interleaved = []
         max_len = max(len(brand_groups[b_id]) for b_id in brand_groups) if brand_groups else 0
         for i in range(max_len):
-            for b_id in sorted(brand_groups.keys()):
+            for b_id in rotated_order:
                 if i < len(brand_groups[b_id]):
                     interleaved.append(brand_groups[b_id][i])
                     
@@ -324,14 +347,28 @@ def run_scheduler() -> dict:
                     next_lock_state = "RENDERING"
                     
             logger.info(f"Claiming selected item {selected_id}: transitioning {current_status} -> {next_lock_state}")
+            claim_succeeded = False
             try:
                 db.collection("content_items").document(selected_id).update({
                     "status": next_lock_state,
                     "updated_at": datetime.datetime.utcnow().isoformat()
                 })
+                claim_succeeded = True
             except Exception as claim_err:
                 logger.error(f"Failed to write claim state for {selected_id}: {claim_err}")
                 selected_item = None
+
+            if claim_succeeded:
+                selected_brand = selected_data.get("brand_id")
+                if selected_brand:
+                    try:
+                        db.collection("scheduler_leases").document("round_robin_cursor").set({
+                            "last_dispatched_brand": selected_brand,
+                            "updated_at": datetime.datetime.utcnow().isoformat()
+                        }, merge=True)
+                        logger.info(f"Updated round-robin cursor to last_dispatched_brand={selected_brand}")
+                    except Exception as cursor_write_err:
+                        logger.warning(f"Failed to update round-robin cursor to '{selected_brand}': {cursor_write_err}")
         
         # Release global lease before dispatching
         if lease_acquired:
