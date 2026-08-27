@@ -1,94 +1,6 @@
 {
   "indexes": [
     {
-      "collectionGroup": "editorial_calendar",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "brand",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "processed",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "date",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "editorial_calendar",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "processed",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "date",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "scheduled_posts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "brand_id",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "scheduled_time",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "scheduled_posts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "scheduled_time",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "scheduled_posts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "posted_at",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "content_queue",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "brand_id",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "content_items",
       "queryScope": "COLLECTION",
       "fields": [
@@ -97,11 +9,46 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "created_at",
+          "fieldPath": "updated_at",
           "order": "DESCENDING"
+        }
+      ]
+    },
+
+    {
+      "collectionGroup": "editorial_calendar",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "brand",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+
+    {
+      "collectionGroup": "editorial_calendar",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "brand",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
         }
       ]
     }
   ],
+
   "fieldOverrides": []
 }

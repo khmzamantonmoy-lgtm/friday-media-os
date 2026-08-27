@@ -25,49 +25,57 @@ render_header("Editorial Calendar", "Brand Content Planning & Google Agent Assig
 db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
 
 # --- Add Calendar Assignment Form ---
-with st.expander("➕ Add Optional Manual Topic Assignment"):
-    with st.form("add_calendar_item"):
-        col1, col2, col3 = st.columns([2, 1, 1])
-        with col1:
-            cal_topic = st.text_input("Editorial Topic", placeholder="e.g. 'Stoic Lessons on Crisis Leadership'")
-        with col2:
-            cal_brand = st.selectbox("Target Brand", options=list(BRAND_PROFILES.keys()), format_func=lambda b: BRAND_PROFILES[b]["display_name"])
-        with col3:
-            cal_priority = st.selectbox("Priority", ["high", "medium", "low"])
+st.markdown('<div class="saas-card">', unsafe_allow_html=True)
+st.markdown("### ➕ Add Optional Manual Topic Assignment")
+st.caption("Inject a manual topic directly into the scheduler. If left empty, Google Agents will decide autonomously.")
 
-        col_date, col_notes = st.columns([1, 2])
-        with col_date:
-            cal_date = st.date_input("Scheduled Date", value=datetime.date.today())
-        with col_notes:
-            cal_notes = st.text_input("Editorial Notes / Guidelines", placeholder="Focus on executive risk")
+with st.form("add_calendar_item"):
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        cal_topic = st.text_input("Editorial Topic", placeholder="e.g. 'Stoic Lessons on Crisis Leadership'")
+    with col2:
+        cal_brand = st.selectbox("Target Brand", options=list(BRAND_PROFILES.keys()), format_func=lambda b: BRAND_PROFILES[b]["display_name"])
+    with col3:
+        cal_priority = st.selectbox("Priority", ["high", "medium", "low"])
 
-        submitted = st.form_submit_button("Add Assignment")
-        if submitted:
-            if not cal_topic.strip():
-                st.error("Topic is required.")
-            else:
-                db.collection("editorial_calendar").add({
-                    "brand": cal_brand,
-                    "topic": cal_topic,
-                    "priority": cal_priority,
-                    "date": datetime.datetime.combine(cal_date, datetime.time(12, 0)),
-                    "notes": cal_notes,
-                    "status": "pending",
-                    "processed": False,
-                    "source": "manual",
-                    "created_at": firestore.SERVER_TIMESTAMP,
-                })
-                st.success(f"Added topic '{cal_topic}' for {BRAND_PROFILES[cal_brand]['display_name']}.")
-                st.rerun()
+    col_date, col_notes = st.columns([1, 2])
+    with col_date:
+        cal_date = st.date_input("Scheduled Date", value=datetime.date.today())
+    with col_notes:
+        cal_notes = st.text_input("Editorial Notes / Guidelines", placeholder="Focus on executive risk")
+
+    submitted = st.form_submit_button("Add Assignment")
+    if submitted:
+        if not cal_topic.strip():
+            st.error("Topic is required.")
+        else:
+            db.collection("editorial_calendar").add({
+                "brand": cal_brand,
+                "topic": cal_topic,
+                "priority": cal_priority,
+                "date": datetime.datetime.combine(cal_date, datetime.time(12, 0)),
+                "notes": cal_notes,
+                "status": "pending",
+                "processed": False,
+                "source": "manual",
+                "created_at": firestore.SERVER_TIMESTAMP,
+            })
+            st.success(f"Added topic '{cal_topic}' for {BRAND_PROFILES[cal_brand]['display_name']}.")
+            st.rerun()
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 st.write("")
 
 # --- Filter Bar ---
+st.markdown('<div class="saas-card">', unsafe_allow_html=True)
+st.markdown("### 🔍 Filter Calendar Items")
 col_f1, col_f2 = st.columns([1, 1])
 with col_f1:
     filter_brand = st.selectbox("Filter by Brand", ["All Brands"] + list(BRAND_PROFILES.keys()))
 with col_f2:
     filter_status = st.selectbox("Filter by Status", ["All Statuses", "pending", "processed"])
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Query Calendar Items
 query = db.collection("editorial_calendar").order_by("date", direction=firestore.Query.ASCENDING)
@@ -76,11 +84,14 @@ if filter_brand != "All Brands":
 if filter_status != "All Statuses":
     query = query.where("status", "==", filter_status)
 
-items = list(query.limit(50).stream())
+try:
+    items = list(query.limit(50).stream())
+except Exception:
+    items = []
 
 st.markdown('<div class="saas-card">', unsafe_allow_html=True)
 st.markdown("### 📅 Editorial Assignment Queue")
-st.caption("If the queue is empty, Google Agents automatically determine and generate topics.")
+st.caption("Upcoming scheduled assignments. If empty, the autonomous agent will decide.")
 
 if not items:
     st.info("No topic assignments found matching the filter. Agents are operating in Autonomous Mode.")

@@ -21,10 +21,10 @@ from src.agents.google_agent_client import AGENT_MAPPING, GoogleAgentClient
 from src.verification.verification_layer import VerificationLayer
 from dashboard.theme import apply_saas_theme, render_header
 
-st.set_page_config(page_title="Autonomous Studio - FRIDAY Media OS", layout="wide")
+st.set_page_config(page_title="Automation Engine - FRIDAY Media OS", layout="wide")
 
 apply_saas_theme()
-render_header("Autonomous Studio", "Google Agent Platform Operations & Autonomous Publishing Center", badge="AUTONOMOUS")
+render_header("Automation Engine", "Google Agent Platform Fleet & Autonomous Content Scheduler", badge="AUTONOMOUS")
 
 db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
 
@@ -61,7 +61,7 @@ with col_head3:
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-st.divider()
+st.write("")
 st.markdown("## 🤖 Google Agent Platform Fleet")
 
 # --- Fetch Brand Profiles and Brand Memories ---
@@ -106,7 +106,7 @@ for brand_doc in brands:
     # Card Top Bar
     c_title, c_badge = st.columns([3, 1])
     with c_title:
-        st.markdown(f'<div class="agent-title">🧠 {agent_info["agent_name"]} <span style="font-size:0.85rem; font-weight:normal; color:#94A3B8;">({brand_id})</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="agent-title">🧠 {agent_info["agent_name"]} <span style="font-size:0.85rem; font-weight:normal; color:#64748B;">({brand_id})</span></div>', unsafe_allow_html=True)
         st.caption(f"Role: **{agent_info['role']}** · Strategy: `{profile.get('topic_strategy', 'hybrid')}`")
     with c_badge:
         st.markdown(status_badge, unsafe_allow_html=True)
@@ -114,24 +114,24 @@ for brand_doc in brands:
     # Agent KPIs
     st.markdown(
         f"""
-        <div class="kpi-container">
-            <div class="kpi-box">
+        <div class="kpi-grid">
+            <div class="kpi-item">
                 <div class="kpi-label">Today's Videos</div>
                 <div class="kpi-value">{len(today_posts)} / {profile.get('publish_frequency_per_day', 1)}</div>
             </div>
-            <div class="kpi-box">
+            <div class="kpi-item">
                 <div class="kpi-label">Memory Size</div>
                 <div class="kpi-value">{len(memory_data.get('last_200_videos', []))} vids</div>
             </div>
-            <div class="kpi-box">
+            <div class="kpi-item">
                 <div class="kpi-label">Sim Threshold</div>
                 <div class="kpi-value">{profile.get('never_repeat_similarity', 0.80)}</div>
             </div>
-            <div class="kpi-box">
+            <div class="kpi-item">
                 <div class="kpi-label">Confidence</div>
                 <div class="kpi-value">96.4%</div>
             </div>
-            <div class="kpi-box">
+            <div class="kpi-item">
                 <div class="kpi-label">Quality Score</div>
                 <div class="kpi-value">94.8%</div>
             </div>
@@ -175,7 +175,7 @@ for brand_doc in brands:
     with btn_col4:
         with st.expander("📋 View Agent Logs"):
             st.write(f"**Audience Target:** {profile.get('audience', 'N/A')}")
-            st.write(f"**Content Angle:** {profile.get('content_angle', 'N/A')}")
+            st.write(f"**Tone Profile:** {profile.get('tone', 'N/A')}")
             st.write(f"**Categories:** {profile.get('categories', [])}")
             st.write(f"**Avoid Topics:** {profile.get('avoid_topics', [])}")
 

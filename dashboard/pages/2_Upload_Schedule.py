@@ -20,16 +20,15 @@ from dashboard.theme import apply_saas_theme, render_header
 st.set_page_config(page_title="Upload & Schedule — FRIDAY Media OS", layout="wide")
 
 apply_saas_theme()
-render_header("Upload & Schedule", "Social Platform Distribution & AI Metadata Refinement", badge="PUBLISHER")
+render_header("Upload & Schedule", "Social Platform Distribution & AI Metadata Refinement Panel", badge="PUBLISHER")
 
 db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
 
 # Query published content items
-published_docs = list(
-    db.collection("content_items")
-    .where("status", "==", "published")
-    .stream()
-)
+try:
+    published_docs = list(db.collection("content_items").where("status", "==", "published").stream())
+except Exception:
+    published_docs = []
 
 if not published_docs:
     st.info("No published content available for scheduling yet. Generate content on the Home page first.")
@@ -57,7 +56,7 @@ else:
         st.session_state.chosen_caption = st.session_state.original_caption
         st.session_state.chosen_hashtags = ", ".join(st.session_state.original_hashtags)
 
-    # 1. AI Metadata Editor Section (Clean Editor-style Layout)
+    # 1. AI Metadata Editor Section
     st.markdown('<div class="saas-card">', unsafe_allow_html=True)
     st.markdown("### 📝 AI Metadata Refinement")
 
@@ -144,7 +143,7 @@ else:
                     "updated_at": firestore.SERVER_TIMESTAMP
                 })
                 
-                st.session_state.original_titles = new_metadata.get("title_suggestions", [])
+                st.session_state.original_titles = new_metadata.get("title_suggestions", []),
                 st.session_state.original_caption = new_metadata.get("caption", "")
                 st.session_state.original_hashtags = new_metadata.get("hashtags", [])
                 
@@ -207,11 +206,10 @@ else:
 st.markdown('<div class="saas-card">', unsafe_allow_html=True)
 st.markdown("### 📋 Scheduled Posts Queue")
 
-scheduled_docs = list(
-    db.collection("scheduled_posts")
-    .order_by("scheduled_time", direction=firestore.Query.ASCENDING)
-    .stream()
-)
+try:
+    scheduled_docs = list(db.collection("scheduled_posts").order_by("scheduled_time", direction=firestore.Query.ASCENDING).stream())
+except Exception:
+    scheduled_docs = []
 
 if not scheduled_docs:
     st.info("No posts scheduled yet.")

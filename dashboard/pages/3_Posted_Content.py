@@ -19,20 +19,24 @@ from src.config.firestore_schema import BRAND_PROFILES
 st.set_page_config(page_title="Posted Content - FRIDAY Media OS", layout="wide")
 
 apply_saas_theme()
-render_header("Posted Content", "Media Management & Verified Distribution Archive", badge="ARCHIVE")
+render_header("Posted Content", "Media Management & Verified Distribution Archive Catalog", badge="ARCHIVE")
 
 db = firestore.Client(project=os.environ.get("GCP_PROJECT_ID", "friday-media-prod"))
 
 # Query posted/scheduled content
-posted_docs = list(
-    db.collection("scheduled_posts")
-    .where("status", "==", "posted")
-    .order_by("posted_at", direction=firestore.Query.DESCENDING)
-    .stream()
-)
+try:
+    posted_docs = list(
+        db.collection("scheduled_posts")
+        .where("status", "==", "posted")
+        .order_by("posted_at", direction=firestore.Query.DESCENDING)
+        .stream()
+    )
+except Exception:
+    posted_docs = []
 
 st.markdown('<div class="saas-card">', unsafe_allow_html=True)
 st.markdown("### 📽 Published Video Archive")
+st.caption("Historical log of successfully verified distributions across YouTube channels.")
 
 if not posted_docs:
     st.info("No published videos found yet.")

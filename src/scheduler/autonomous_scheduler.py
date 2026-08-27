@@ -76,46 +76,95 @@ def run_scheduler() -> dict:
     try:
         goal_engine = GoalEngine()
 
-        # 1. Housekeeping: Find stuck items and fail them
+        # 1. Housekeeping: Find stuck items and fail/recover them
         try:
             now = datetime.datetime.utcnow()
-            two_hours_ago_dt = now - datetime.timedelta(hours=2)
 
-            # Query for items not in terminal states
-            terminal_states = ["COMPLETE", "FAILED", "PUBLIC", "CAPTIONS_VERIFIED", "MEMORY_UPDATED"]
+            # State-specific timeout thresholds in minutes
+            STATE_TIMEOUT_MINUTES = {
+                "NEW": 240,               # 4 hours
+                "TOPIC_SELECTED": 60,     # 60 min
+                "SCRIPT_READY": 90,       # 90 min
+                "ASSETS_READY": 15,       # 15 min
+                "RENDERING": 90,          # 90 min
+                "RENDERED": 15,           # 15 min
+                "UPLOADING": 60,          # 60 min
+                "CAPTIONS_VERIFIED": 15,  # 15 min
+                "MEMORY_UPDATED": 15,     # 15 min
+            }
+
+            # Query items not in final terminal states
+            terminal_states = ["COMPLETE", "FAILED"]
 
             query = db.collection("content_items").where("status", "not-in", terminal_states).stream()
 
             for doc in query:
                 data = doc.to_dict()
-                created_at = data.get("created_at")
-                created_at_dt = None
+                status = data.get("status", "NEW")
 
-                if created_at:
-                    if isinstance(created_at, str):
+                # Parse timestamps (prefer updated_at, fallback to created_at)
+                updated_at_raw = data.get("updated_at")
+                created_at_raw = data.get("created_at")
+                
+                ref_dt = None
+                raw_timestamp = updated_at_raw if (status != "NEW" and updated_at_raw) else created_at_raw
+                
+                if raw_timestamp:
+                    if isinstance(raw_timestamp, str):
                         try:
-                            created_at_dt = datetime.datetime.fromisoformat(
-                                created_at.replace("Z", "+00:00")
+                            ref_dt = datetime.datetime.fromisoformat(
+                                raw_timestamp.replace("Z", "+00:00")
                             ).replace(tzinfo=None)
                         except Exception:
-                            created_at_dt = None
-                    elif hasattr(created_at, "replace"):
+                            ref_dt = None
+                    elif hasattr(raw_timestamp, "replace"):
                         try:
-                            created_at_dt = (
-                                created_at.replace(tzinfo=None)
-                                if getattr(created_at, "tzinfo", None)
-                                else created_at
+                            ref_dt = (
+                                raw_timestamp.replace(tzinfo=None)
+                                if getattr(raw_timestamp, "tzinfo", None)
+                                else raw_timestamp
                             )
                         except Exception:
-                            created_at_dt = None
+                            ref_dt = None
 
-                if created_at_dt and created_at_dt < two_hours_ago_dt:
-                    logger.warning(f"Marking content item {doc.id} as FAILED (stuck > 2 hours)")
-                    doc.reference.update({
-                        "status": "FAILED",
-                        "last_error": "Timeout: stuck in non-terminal state for > 2 hours",
-                        "failed_state": data.get("status"),
-                    })
+                if ref_dt:
+                    age_minutes = (now - ref_dt).total_seconds() / 60.0
+
+                    # Case A: PUBLIC state-specific 24h handling
+                    if status == "PUBLIC":
+                        if age_minutes >= 1440:  # 24 hours
+                            yt_id = data.get("youtube_video_id")
+                            if yt_id:
+                                logger.info(f"Resolving stale PUBLIC item {doc.id} after 24h -> CAPTIONS_VERIFIED")
+                                is_verified = data.get("youtube_verified") is True
+                                doc.reference.update({
+                                    "status": "CAPTIONS_VERIFIED",
+                                    "youtube_verified": is_verified,
+                                    "updated_at": datetime.datetime.utcnow().isoformat(),
+                                    "public_timeout_resolved": True
+                                })
+                            else:
+                                logger.warning(f"Failing stale PUBLIC item {doc.id} after 24h (no youtube_video_id)")
+                                doc.reference.update({
+                                    "status": "FAILED",
+                                    "last_error": "PUBLIC timeout: no youtube_video_id after 24h",
+                                    "failed_state": "PUBLIC",
+                                    "updated_at": datetime.datetime.utcnow().isoformat()
+                                })
+
+                    # Case B: Standard in-flight states
+                    elif status in STATE_TIMEOUT_MINUTES:
+                        timeout_limit = STATE_TIMEOUT_MINUTES[status]
+                        if age_minutes >= timeout_limit:
+                            logger.warning(
+                                f"Marking content item {doc.id} as FAILED (stuck in state {status} for {age_minutes:.1f}m > {timeout_limit}m)"
+                            )
+                            doc.reference.update({
+                                "status": "FAILED",
+                                "last_error": f"Timeout: stuck in state {status} for > {timeout_limit} minutes",
+                                "failed_state": status,
+                                "updated_at": datetime.datetime.utcnow().isoformat()
+                            })
 
                 # Reset verification flags for items incorrectly marked
                 if data.get("youtube_verified") and not data.get("youtube_video_id"):

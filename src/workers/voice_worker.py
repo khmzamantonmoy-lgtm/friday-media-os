@@ -15,7 +15,7 @@ try:
 except Exception:
     PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "friday-media-os")
 
-BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", f"friday-media-assets-{PROJECT_ID}")
+BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", "friday-media-assets-prod")
 
 
 def synthesize_voice(narration: str, brand_id: str, voice_id: str, content_id: str) -> str:

@@ -139,7 +139,7 @@ Generate a complete, verified editorial decision package. Return JSON matching t
 
         def op(client):
             return client.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=agent_info["system_instruction"],

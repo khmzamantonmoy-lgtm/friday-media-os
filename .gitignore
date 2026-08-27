@@ -92,3 +92,6 @@ build/
 !docker-compose.yml
 !docker-compose.yaml
 !requirements*.txt
+The Thinking Room Secret Key.json
+*.mp4
+TEMP_MPY_*

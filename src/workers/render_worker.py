@@ -33,7 +33,7 @@ try:
 except Exception:
     PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "friday-media-os")
 
-BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", f"friday-media-assets-{PROJECT_ID}")
+BUCKET_NAME = os.environ.get("GCS_BUCKET_NAME", "friday-media-assets-prod")
 VIDEO_SIZE = (1080, 1920)
 
 

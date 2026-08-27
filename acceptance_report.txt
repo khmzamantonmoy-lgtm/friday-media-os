@@ -1,0 +1,967 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /usr/bin/python
+cachedir: .pytest_cache
+metadata: {'Python': '3.12.3', 'Platform': 'Linux-6.6.143+-x86_64-with-glibc2.39', 'Packages': {'pytest': '9.1.1', 'pluggy': '1.6.0'}, 'Plugins': {'json-report': '1.5.0', 'metadata': '3.1.1', 'mock': '3.15.1', 'anyio': '4.13.0'}, 'JAVA_HOME': '/usr/lib/jvm/java-21-openjdk-amd64'}
+rootdir: /home/khmzamantonmoy/friday-media-os
+plugins: json-report-1.5.0, metadata-3.1.1, mock-3.15.1, anyio-4.13.0
+collecting ... collected 170 items
+
+tests/tier1_unit/test_metrics_service.py::test_increment_calls_firestore_set PASSED [  0%]
+tests/tier1_unit/test_metrics_service.py::test_update_metrics_uses_merge PASSED [  1%]
+tests/tier1_unit/test_metrics_service.py::test_document_path_is_brand_scoped PASSED [  1%]
+tests/tier1_unit/test_metrics_service.py::test_firestore_error_does_not_raise PASSED [  2%]
+tests/tier1_unit/test_metrics_service.py::test_four_brand_ids_produce_four_paths PASSED [  2%]
+tests/tier1_unit/test_retry_manager.py::test_success_on_first_attempt PASSED [  3%]
+tests/tier1_unit/test_retry_manager.py::test_retry_on_transient_failure PASSED [  4%]
+tests/tier1_unit/test_retry_manager.py::test_http_429_enforces_minimum_60s PASSED [  4%]
+tests/tier1_unit/test_retry_manager.py::test_http_503_enforces_minimum_30s PASSED [  5%]
+tests/tier1_unit/test_retry_manager.py::test_dead_letter_written_on_max_retries PASSED [  5%]
+tests/tier1_unit/test_retry_manager.py::test_exception_reraised_after_max_retries PASSED [  6%]
+tests/tier1_unit/test_retry_manager.py::test_backoff_increases_per_attempt PASSED [  7%]
+tests/tier1_unit/test_retry_manager.py::test_jitter_within_bounds PASSED [  7%]
+tests/tier1_unit/test_retry_manager.py::test_dlq_failure_does_not_suppress_original_exception PASSED [  8%]
+tests/tier1_unit/test_semantic_memory.py::test_empty_collection_never_duplicate PASSED [  8%]
+tests/tier1_unit/test_semantic_memory.py::test_low_similarity_accepted PASSED [  9%]
+tests/tier1_unit/test_semantic_memory.py::test_high_similarity_rejected PASSED [ 10%]
+tests/tier1_unit/test_semantic_memory.py::test_gray_zone_invokes_gemini PASSED [ 10%]
+tests/tier1_unit/test_semantic_memory.py::test_gemini_yes_means_duplicate PASSED [ 11%]
+tests/tier1_unit/test_semantic_memory.py::test_gemini_no_means_unique PASSED [ 11%]
+tests/tier1_unit/test_semantic_memory.py::test_gemini_exception_defaults_false PASSED [ 12%]
+tests/tier1_unit/test_semantic_memory.py::test_add_memory_calls_collection_add PASSED [ 12%]
+tests/tier1_unit/test_semantic_memory.py::test_add_memory_uses_embedding PASSED [ 13%]
+tests/tier1_unit/test_semantic_memory.py::test_four_brands_use_separate_collections PASSED [ 14%]
+tests/tier1_unit/test_semantic_memory.py::test_chromadb_unavailable_skips_check PASSED [ 14%]
+tests/tier1_unit/test_semantic_memory.py::test_similarity_clamped_to_zero PASSED [ 15%]
+tests/tier1_unit/test_state_machine.py::test_full_forward_path PASSED    [ 15%]
+tests/tier1_unit/test_state_machine.py::test_illegal_skip_transition PASSED [ 16%]
+tests/tier1_unit/test_state_machine.py::test_illegal_backward_transition PASSED [ 17%]
+tests/tier1_unit/test_state_machine.py::test_retry_can_resume_any_stage PASSED [ 17%]
+tests/tier1_unit/test_state_machine.py::test_failed_to_retry_allowed PASSED [ 18%]
+tests/tier1_unit/test_state_machine.py::test_complete_is_strictly_terminal PASSED [ 18%]
+tests/tier1_unit/test_state_machine.py::test_failed_cannot_go_to_complete PASSED [ 19%]
+tests/tier1_unit/test_state_machine.py::test_all_13_enum_values_defined PASSED [ 20%]
+tests/tier1_unit/test_state_machine.py::test_every_non_terminal_has_failure_exit PASSED [ 20%]
+tests/tier1_unit/test_state_machine.py::test_transition_table_exhaustive PASSED [ 21%]
+tests/tier2_integration/test_brand_worker.py::test_full_cycle_writes_complete PASSED [ 21%]
+tests/tier2_integration/test_brand_worker.py::test_duplicate_topic_aborts_cycle PASSED [ 22%]
+tests/tier2_integration/test_brand_worker.py::test_content_id_has_brand_prefix PASSED [ 22%]
+tests/tier2_integration/test_brand_worker.py::test_upload_failure_triggers_retry PASSED [ 23%]
+tests/tier2_integration/test_brand_worker.py::test_max_retries_sends_to_dlq FAILED [ 24%]
+tests/tier2_integration/test_cross_system_consistency.py::test_goal_engine_queries_content_queue PASSED [ 24%]
+tests/tier2_integration/test_cross_system_consistency.py::test_brand_worker_writes_to_content_items PASSED [ 25%]
+tests/tier2_integration/test_cross_system_consistency.py::test_scheduler_queries_content_items_for_housekeeping PASSED [ 25%]
+tests/tier2_integration/test_cross_system_consistency.py::test_metrics_service_path_matches_dashboard PASSED [ 26%]
+tests/tier2_integration/test_cross_system_consistency.py::test_verifier_writes_youtube_verified_field PASSED [ 27%]
+tests/tier2_integration/test_cross_system_consistency.py::test_brand_registry_daily_target_is_four PASSED [ 27%]
+tests/tier2_integration/test_cross_system_consistency.py::test_state_machine_complete_value_matches_goal_engine PASSED [ 28%]
+tests/tier2_integration/test_cross_system_consistency.py::test_brand_registry_all_four_brands_present PASSED [ 28%]
+tests/tier2_integration/test_cross_system_consistency.py::test_verifier_requires_brand_id_argument PASSED [ 29%]
+tests/tier2_integration/test_cross_system_consistency.py::test_scheduler_imports_brand_registry PASSED [ 30%]
+tests/tier2_integration/test_goal_engine.py::test_unknown_brand_logs_error_no_exception PASSED [ 30%]
+tests/tier2_integration/test_goal_engine.py::test_zero_missing_no_worker_calls PASSED [ 31%]
+tests/tier2_integration/test_goal_engine.py::test_one_missing_triggers_one_cycle PASSED [ 31%]
+tests/tier2_integration/test_goal_engine.py::test_four_missing_triggers_four_cycles PASSED [ 32%]
+tests/tier2_integration/test_goal_engine.py::test_active_items_reduce_missing PASSED [ 32%]
+tests/tier2_integration/test_goal_engine.py::test_unverified_complete_not_counted FAILED [ 33%]
+tests/tier2_integration/test_goal_engine.py::test_failed_items_not_counted PASSED [ 34%]
+tests/tier2_integration/test_goal_engine.py::test_missing_clamped_at_zero PASSED [ 34%]
+tests/tier2_integration/test_goal_engine.py::test_worker_exception_logged_not_raised PASSED [ 35%]
+tests/tier2_integration/test_goal_engine.py::test_daily_boundary_used PASSED [ 35%]
+tests/tier2_integration/test_publication_verifier.py::test_passes_when_public_processed_captioned PASSED [ 36%]
+tests/tier2_integration/test_publication_verifier.py::test_fails_when_private PASSED [ 37%]
+tests/tier2_integration/test_publication_verifier.py::test_fails_when_not_processed PASSED [ 37%]
+tests/tier2_integration/test_publication_verifier.py::test_fails_when_no_captions PASSED [ 38%]
+tests/tier2_integration/test_publication_verifier.py::test_fails_when_only_default_thumbnail PASSED [ 38%]
+tests/tier2_integration/test_publication_verifier.py::test_firestore_youtube_verified_written_on_pass PASSED [ 39%]
+tests/tier2_integration/test_publication_verifier.py::test_brand_scoped_credentials_used PASSED [ 40%]
+tests/tier2_integration/test_publication_verifier.py::test_missing_video_returns_false PASSED [ 40%]
+tests/tier2_integration/test_publication_verifier.py::test_youtube_api_exception_returns_false PASSED [ 41%]
+tests/tier2_integration/test_scheduler_housekeeping.py::test_stale_item_marked_failed PASSED [ 41%]
+tests/tier2_integration/test_scheduler_housekeeping.py::test_fresh_item_not_touched PASSED [ 42%]
+tests/tier2_integration/test_scheduler_housekeeping.py::test_false_verified_flag_reset PASSED [ 42%]
+tests/tier2_integration/test_scheduler_housekeeping.py::test_correct_verified_flag_preserved PASSED [ 43%]
+tests/tier2_integration/test_scheduler_housekeeping.py::test_housekeeping_exception_does_not_crash_scheduler PASSED [ 44%]
+tests/tier2_integration/test_scheduler_housekeeping.py::test_all_four_brands_evaluated PASSED [ 44%]
+tests/tier2_integration/test_scheduler_housekeeping.py::test_brand_error_does_not_stop_others PASSED [ 45%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[bd_threatpulse] FAILED [ 45%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[wealthwise] FAILED [ 46%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[kids_universe] FAILED [ 47%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[philosophy] FAILED [ 47%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[bd_threatpulse] FAILED [ 48%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[wealthwise] FAILED [ 48%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[kids_universe] FAILED [ 49%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[philosophy] FAILED [ 50%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_orphan_queue_records FAILED [ 50%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_dead_letter_items_today FAILED [ 51%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_brand_memory_updated_today[bd_threatpulse] PASSED [ 51%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_brand_memory_updated_today[wealthwise] PASSED [ 52%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_brand_memory_updated_today[kids_universe] PASSED [ 52%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_brand_memory_updated_today[philosophy] PASSED [ 53%]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_items_stuck_in_rendering FAILED [ 54%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_exists_in_secret_manager[bd_threatpulse-bd-threatpulse-token] PASSED [ 54%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_exists_in_secret_manager[wealthwise-wealthwise-token] PASSED [ 55%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_exists_in_secret_manager[kids_universe-tinysparks-token] PASSED [ 55%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_exists_in_secret_manager[philosophy-thinkingroom-token] PASSED [ 56%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_contains_youtube_upload_scope[bd_threatpulse-bd-threatpulse-token] PASSED [ 57%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_contains_youtube_upload_scope[wealthwise-wealthwise-token] PASSED [ 57%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_contains_youtube_upload_scope[kids_universe-tinysparks-token] PASSED [ 58%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_contains_youtube_upload_scope[philosophy-thinkingroom-token] PASSED [ 58%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_contains_force_ssl_scope[bd_threatpulse-bd-threatpulse-token] PASSED [ 59%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_contains_force_ssl_scope[wealthwise-wealthwise-token] PASSED [ 60%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_contains_force_ssl_scope[kids_universe-tinysparks-token] PASSED [ 60%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_contains_force_ssl_scope[philosophy-thinkingroom-token] PASSED [ 61%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_has_refresh_token[bd_threatpulse-bd-threatpulse-token] PASSED [ 61%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_has_refresh_token[wealthwise-wealthwise-token] PASSED [ 62%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_has_refresh_token[kids_universe-tinysparks-token] PASSED [ 62%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_token_has_refresh_token[philosophy-thinkingroom-token] PASSED [ 63%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_credentials_refresh_without_interaction[bd_threatpulse] PASSED [ 64%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_credentials_refresh_without_interaction[wealthwise] PASSED [ 64%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_credentials_refresh_without_interaction[kids_universe] PASSED [ 65%]
+tests/tier3a_production_acceptance/test_youtube_oauth.py::test_credentials_refresh_without_interaction[philosophy] PASSED [ 65%]
+tests/tier3b_operational_health/test_dashboard_sync.py::test_content_items_queryable_by_brand PASSED [ 66%]
+tests/tier3b_operational_health/test_dashboard_sync.py::test_scheduled_posts_readable PASSED [ 67%]
+tests/tier3b_operational_health/test_dashboard_sync.py::test_all_brands_have_content_items PASSED [ 67%]
+tests/tier3b_operational_health/test_dashboard_sync.py::test_total_published_count_consistent PASSED [ 68%]
+tests/tier3b_operational_health/test_dashboard_sync.py::test_brand_profiles_match_registry PASSED [ 68%]
+tests/tier3b_operational_health/test_dashboard_sync.py::test_content_queue_status_values_are_valid PASSED [ 69%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_content_queue_is_accessible PASSED [ 70%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_content_items_is_accessible PASSED [ 70%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_brand_memory_exists[bd_threatpulse] PASSED [ 71%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_brand_memory_exists[wealthwise] PASSED [ 71%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_brand_memory_exists[kids_universe] PASSED [ 72%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_brand_memory_exists[philosophy] PASSED [ 72%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_production_metrics_collection_accessible PASSED [ 73%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_scheduled_posts_accessible PASSED [ 74%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_no_items_stuck_in_non_terminal_over_2h FAILED [ 74%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_dead_letter_queue_accessible PASSED [ 75%]
+tests/tier3b_operational_health/test_firestore_collections.py::test_content_items_have_required_fields PASSED [ 75%]
+tests/tier3b_operational_health/test_production_metrics.py::test_production_metrics_collection_exists PASSED [ 76%]
+tests/tier3b_operational_health/test_production_metrics.py::test_brand_has_today_metrics_doc[bd_threatpulse] XFAIL [ 77%]
+tests/tier3b_operational_health/test_production_metrics.py::test_brand_has_today_metrics_doc[wealthwise] XFAIL [ 77%]
+tests/tier3b_operational_health/test_production_metrics.py::test_brand_has_today_metrics_doc[kids_universe] XFAIL [ 78%]
+tests/tier3b_operational_health/test_production_metrics.py::test_brand_has_today_metrics_doc[philosophy] XFAIL [ 78%]
+tests/tier3b_operational_health/test_production_metrics.py::test_published_count_is_non_negative[bd_threatpulse] SKIPPED [ 79%]
+tests/tier3b_operational_health/test_production_metrics.py::test_published_count_is_non_negative[wealthwise] SKIPPED [ 80%]
+tests/tier3b_operational_health/test_production_metrics.py::test_published_count_is_non_negative[kids_universe] SKIPPED [ 80%]
+tests/tier3b_operational_health/test_production_metrics.py::test_published_count_is_non_negative[philosophy] SKIPPED [ 81%]
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[bd_threatpulse] SKIPPED [ 81%]
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[wealthwise] SKIPPED [ 82%]
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[kids_universe] SKIPPED [ 82%]
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[philosophy] SKIPPED [ 83%]
+tests/tier3b_operational_health/test_production_metrics.py::test_no_metrics_gap_yesterday XFAIL [ 84%]
+tests/tier4_chaos/test_automatic_recovery.py::test_script_failure_then_recovery PASSED [ 84%]
+tests/tier4_chaos/test_automatic_recovery.py::test_upload_failure_then_recovery PASSED [ 85%]
+tests/tier4_chaos/test_automatic_recovery.py::test_goal_engine_relaunches_after_worker_crash PASSED [ 85%]
+tests/tier4_chaos/test_automatic_recovery.py::test_image_generation_recovery PASSED [ 86%]
+tests/tier4_chaos/test_automatic_recovery.py::test_render_failure_then_recovery PASSED [ 87%]
+tests/tier4_chaos/test_automatic_recovery.py::test_scheduler_restart_resumes_missing_slots PASSED [ 87%]
+tests/tier4_chaos/test_automatic_recovery.py::test_dlq_write_failure_does_not_block_recovery PASSED [ 88%]
+tests/tier4_chaos/test_automatic_recovery.py::test_verification_retry_eventually_passes PASSED [ 88%]
+tests/tier4_chaos/test_quota_limits.py::test_gemini_429_triggers_60s_minimum_wait PASSED [ 89%]
+tests/tier4_chaos/test_quota_limits.py::test_youtube_429_triggers_60s_minimum_wait PASSED [ 90%]
+tests/tier4_chaos/test_quota_limits.py::test_sustained_quota_exhaustion_hits_dlq PASSED [ 90%]
+tests/tier4_chaos/test_quota_limits.py::test_quota_recovery_succeeds PASSED [ 91%]
+tests/tier4_chaos/test_quota_limits.py::test_one_brand_quota_does_not_affect_others PASSED [ 91%]
+tests/tier4_chaos/test_quota_limits.py::test_tts_503_triggers_30s_minimum_wait PASSED [ 92%]
+tests/tier4_chaos/test_scalability.py::test_goal_engine_handles_8_brands PASSED [ 92%]
+tests/tier4_chaos/test_scalability.py::test_goal_engine_handles_16_brands PASSED [ 93%]
+tests/tier4_chaos/test_scalability.py::test_goal_engine_handles_32_brands PASSED [ 94%]
+tests/tier4_chaos/test_scalability.py::test_brand_isolation_under_scale FAILED [ 94%]
+tests/tier4_chaos/test_scalability.py::test_semantic_memory_separate_per_brand_scale PASSED [ 95%]
+tests/tier4_chaos/test_scalability.py::test_metrics_service_scales_to_32_brands PASSED [ 95%]
+tests/tier4_chaos/test_worker_crashes.py::test_crash_during_script_generation PASSED [ 96%]
+tests/tier4_chaos/test_worker_crashes.py::test_crash_during_voice_synthesis PASSED [ 97%]
+tests/tier4_chaos/test_worker_crashes.py::test_crash_during_image_generation PASSED [ 97%]
+tests/tier4_chaos/test_worker_crashes.py::test_crash_during_render PASSED [ 98%]
+tests/tier4_chaos/test_worker_crashes.py::test_crash_during_upload PASSED [ 98%]
+tests/tier4_chaos/test_worker_crashes.py::test_crash_at_max_retries_sends_to_dlq FAILED [ 99%]
+tests/tier5_golden/test_golden_e2e.py::test_golden_e2e_pipeline_workflow FAILED [100%]
+
+=================================== FAILURES ===================================
+________________________ test_max_retries_sends_to_dlq _________________________
+tests/tier2_integration/test_brand_worker.py:166: in test_max_retries_sends_to_dlq
+    worker._generate_topic = MagicMock(return_value="test")
+E   AssertionError: Expected FAILED: ["call({'status': 'TOPIC_SELECTED'})", "call({'status': 'RETRY', 'retry_count': 1, 'last_error': 'permanent', 'failed_state': 'TOPIC_SELECTED'})"]
+E   assert False
+E    +  where False = any(<generator object test_max_retries_sends_to_dlq.<locals>.<genexpr> at 0x7c29d0a4ce10>)
+------------------------------ Captured log call -------------------------------
+WARNING  src.engine.retry_manager:retry_manager.py:44 Error in _execute_script: permanent. Retrying in 3.42s (Attempt 1/5)
+WARNING  src.engine.retry_manager:retry_manager.py:44 Error in _execute_script: permanent. Retrying in 4.87s (Attempt 2/5)
+WARNING  src.engine.retry_manager:retry_manager.py:44 Error in _execute_script: permanent. Retrying in 8.50s (Attempt 3/5)
+WARNING  src.engine.retry_manager:retry_manager.py:44 Error in _execute_script: permanent. Retrying in 16.61s (Attempt 4/5)
+ERROR    src.engine.retry_manager:retry_manager.py:29 Max retries reached for _execute_script. Writing to dead-letter queue.
+ERROR    src.engine.brand_worker:brand_worker.py:187 Error in brand worker for bd_threatpulse_69287067
+Traceback (most recent call last):
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 116, in _process_content
+    script = self._execute_script(brand, topic)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 42, in wrapper
+    raise e
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 18, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 217, in _execute_script
+    return generate_script(brand, topic)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 18, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 217, in _execute_script
+    return generate_script(brand, topic)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 18, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 217, in _execute_script
+    return generate_script(brand, topic)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 18, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 217, in _execute_script
+    return generate_script(brand, topic)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 18, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 217, in _execute_script
+    return generate_script(brand, topic)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+Exception: permanent
+_____________________ test_unverified_complete_not_counted _____________________
+tests/tier2_integration/test_goal_engine.py:115: in test_unverified_complete_not_counted
+    assert mock_instance.run_cycle.call_count == 0
+E   AssertionError: assert 4 == 0
+E    +  where 4 = <MagicMock name='BrandWorker().run_cycle' id='136519087522880'>.call_count
+E    +    where <MagicMock name='BrandWorker().run_cycle' id='136519087522880'> = <MagicMock name='BrandWorker()' id='136519087514944'>.run_cycle
+_______________ test_daily_contract_four_videos[bd_threatpulse] ________________
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:149: in error_remapped_callable
+    return _StreamingResponseIterator(
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:71: in __init__
+    self._stored_first_result = next(self._wrapped)
+                                ^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:547: in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:965: in _next
+    raise self
+E   grpc._channel._MultiThreadedRendezvous: <_MultiThreadedRendezvous of RPC that terminated with:
+E   	status = StatusCode.FAILED_PRECONDITION
+E   	details = "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   	debug_error_string = "FAILED_PRECONDITION:The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   >
+
+The above exception was the direct cause of the following exception:
+tests/tier3a_production_acceptance/test_daily_contract.py:47: in test_daily_contract_four_videos
+    verified = get_verified_today(db, brand_id)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tier3a_production_acceptance/test_daily_contract.py:27: in get_verified_today
+    docs = list(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/stream_generator.py:58: in __next__
+    return self._generator.__next__()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:400: in _make_stream
+    response_iterator, expected_prefix = self._get_stream_iterator(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:250: in _get_stream_iterator
+    response_iterator = self._client._firestore_api.run_query(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/services/firestore/client.py:1558: in run_query
+    response = rpc(
+/usr/local/lib/python3.12/dist-packages/google/api_core/gapic_v1/method.py:128: in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:294: in retry_wrapped_func
+    return retry_target(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:156: in retry_target
+    next_sleep = _retry_error_helper(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_base.py:216: in _retry_error_helper
+    raise final_exc from source_exc
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:147: in retry_target
+    result = target()
+             ^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/timeout.py:130: in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:153: in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+E   google.api_core.exceptions.FailedPrecondition: 400 The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB
+_________________ test_daily_contract_four_videos[wealthwise] __________________
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:149: in error_remapped_callable
+    return _StreamingResponseIterator(
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:71: in __init__
+    self._stored_first_result = next(self._wrapped)
+                                ^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:547: in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:965: in _next
+    raise self
+E   grpc._channel._MultiThreadedRendezvous: <_MultiThreadedRendezvous of RPC that terminated with:
+E   	status = StatusCode.FAILED_PRECONDITION
+E   	details = "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   	debug_error_string = "FAILED_PRECONDITION:The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   >
+
+The above exception was the direct cause of the following exception:
+tests/tier3a_production_acceptance/test_daily_contract.py:47: in test_daily_contract_four_videos
+    verified = get_verified_today(db, brand_id)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tier3a_production_acceptance/test_daily_contract.py:27: in get_verified_today
+    docs = list(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/stream_generator.py:58: in __next__
+    return self._generator.__next__()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:400: in _make_stream
+    response_iterator, expected_prefix = self._get_stream_iterator(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:250: in _get_stream_iterator
+    response_iterator = self._client._firestore_api.run_query(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/services/firestore/client.py:1558: in run_query
+    response = rpc(
+/usr/local/lib/python3.12/dist-packages/google/api_core/gapic_v1/method.py:128: in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:294: in retry_wrapped_func
+    return retry_target(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:156: in retry_target
+    next_sleep = _retry_error_helper(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_base.py:216: in _retry_error_helper
+    raise final_exc from source_exc
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:147: in retry_target
+    result = target()
+             ^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/timeout.py:130: in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:153: in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+E   google.api_core.exceptions.FailedPrecondition: 400 The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB
+________________ test_daily_contract_four_videos[kids_universe] ________________
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:149: in error_remapped_callable
+    return _StreamingResponseIterator(
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:71: in __init__
+    self._stored_first_result = next(self._wrapped)
+                                ^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:547: in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:965: in _next
+    raise self
+E   grpc._channel._MultiThreadedRendezvous: <_MultiThreadedRendezvous of RPC that terminated with:
+E   	status = StatusCode.FAILED_PRECONDITION
+E   	details = "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   	debug_error_string = "FAILED_PRECONDITION:The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   >
+
+The above exception was the direct cause of the following exception:
+tests/tier3a_production_acceptance/test_daily_contract.py:47: in test_daily_contract_four_videos
+    verified = get_verified_today(db, brand_id)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tier3a_production_acceptance/test_daily_contract.py:27: in get_verified_today
+    docs = list(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/stream_generator.py:58: in __next__
+    return self._generator.__next__()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:400: in _make_stream
+    response_iterator, expected_prefix = self._get_stream_iterator(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:250: in _get_stream_iterator
+    response_iterator = self._client._firestore_api.run_query(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/services/firestore/client.py:1558: in run_query
+    response = rpc(
+/usr/local/lib/python3.12/dist-packages/google/api_core/gapic_v1/method.py:128: in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:294: in retry_wrapped_func
+    return retry_target(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:156: in retry_target
+    next_sleep = _retry_error_helper(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_base.py:216: in _retry_error_helper
+    raise final_exc from source_exc
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:147: in retry_target
+    result = target()
+             ^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/timeout.py:130: in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:153: in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+E   google.api_core.exceptions.FailedPrecondition: 400 The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB
+_________________ test_daily_contract_four_videos[philosophy] __________________
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:149: in error_remapped_callable
+    return _StreamingResponseIterator(
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:71: in __init__
+    self._stored_first_result = next(self._wrapped)
+                                ^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:547: in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:965: in _next
+    raise self
+E   grpc._channel._MultiThreadedRendezvous: <_MultiThreadedRendezvous of RPC that terminated with:
+E   	status = StatusCode.FAILED_PRECONDITION
+E   	details = "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   	debug_error_string = "FAILED_PRECONDITION:The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   >
+
+The above exception was the direct cause of the following exception:
+tests/tier3a_production_acceptance/test_daily_contract.py:47: in test_daily_contract_four_videos
+    verified = get_verified_today(db, brand_id)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/tier3a_production_acceptance/test_daily_contract.py:27: in get_verified_today
+    docs = list(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/stream_generator.py:58: in __next__
+    return self._generator.__next__()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:400: in _make_stream
+    response_iterator, expected_prefix = self._get_stream_iterator(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:250: in _get_stream_iterator
+    response_iterator = self._client._firestore_api.run_query(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/services/firestore/client.py:1558: in run_query
+    response = rpc(
+/usr/local/lib/python3.12/dist-packages/google/api_core/gapic_v1/method.py:128: in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:294: in retry_wrapped_func
+    return retry_target(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:156: in retry_target
+    next_sleep = _retry_error_helper(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_base.py:216: in _retry_error_helper
+    raise final_exc from source_exc
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:147: in retry_target
+    result = target()
+             ^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/timeout.py:130: in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:153: in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+E   google.api_core.exceptions.FailedPrecondition: 400 The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB
+____________________ test_no_videos_private[bd_threatpulse] ____________________
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:149: in error_remapped_callable
+    return _StreamingResponseIterator(
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:71: in __init__
+    self._stored_first_result = next(self._wrapped)
+                                ^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:547: in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:965: in _next
+    raise self
+E   grpc._channel._MultiThreadedRendezvous: <_MultiThreadedRendezvous of RPC that terminated with:
+E   	status = StatusCode.FAILED_PRECONDITION
+E   	details = "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   	debug_error_string = "FAILED_PRECONDITION:The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   >
+
+The above exception was the direct cause of the following exception:
+tests/tier3a_production_acceptance/test_daily_contract.py:61: in test_no_videos_private
+    docs = list(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/stream_generator.py:58: in __next__
+    return self._generator.__next__()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:400: in _make_stream
+    response_iterator, expected_prefix = self._get_stream_iterator(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:250: in _get_stream_iterator
+    response_iterator = self._client._firestore_api.run_query(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/services/firestore/client.py:1558: in run_query
+    response = rpc(
+/usr/local/lib/python3.12/dist-packages/google/api_core/gapic_v1/method.py:128: in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:294: in retry_wrapped_func
+    return retry_target(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:156: in retry_target
+    next_sleep = _retry_error_helper(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_base.py:216: in _retry_error_helper
+    raise final_exc from source_exc
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:147: in retry_target
+    result = target()
+             ^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/timeout.py:130: in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:153: in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+E   google.api_core.exceptions.FailedPrecondition: 400 The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB
+______________________ test_no_videos_private[wealthwise] ______________________
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:149: in error_remapped_callable
+    return _StreamingResponseIterator(
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:71: in __init__
+    self._stored_first_result = next(self._wrapped)
+                                ^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:547: in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:965: in _next
+    raise self
+E   grpc._channel._MultiThreadedRendezvous: <_MultiThreadedRendezvous of RPC that terminated with:
+E   	status = StatusCode.FAILED_PRECONDITION
+E   	details = "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   	debug_error_string = "FAILED_PRECONDITION:The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   >
+
+The above exception was the direct cause of the following exception:
+tests/tier3a_production_acceptance/test_daily_contract.py:61: in test_no_videos_private
+    docs = list(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/stream_generator.py:58: in __next__
+    return self._generator.__next__()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:400: in _make_stream
+    response_iterator, expected_prefix = self._get_stream_iterator(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:250: in _get_stream_iterator
+    response_iterator = self._client._firestore_api.run_query(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/services/firestore/client.py:1558: in run_query
+    response = rpc(
+/usr/local/lib/python3.12/dist-packages/google/api_core/gapic_v1/method.py:128: in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:294: in retry_wrapped_func
+    return retry_target(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:156: in retry_target
+    next_sleep = _retry_error_helper(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_base.py:216: in _retry_error_helper
+    raise final_exc from source_exc
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:147: in retry_target
+    result = target()
+             ^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/timeout.py:130: in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:153: in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+E   google.api_core.exceptions.FailedPrecondition: 400 The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB
+____________________ test_no_videos_private[kids_universe] _____________________
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:149: in error_remapped_callable
+    return _StreamingResponseIterator(
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:71: in __init__
+    self._stored_first_result = next(self._wrapped)
+                                ^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:547: in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:965: in _next
+    raise self
+E   grpc._channel._MultiThreadedRendezvous: <_MultiThreadedRendezvous of RPC that terminated with:
+E   	status = StatusCode.FAILED_PRECONDITION
+E   	details = "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   	debug_error_string = "FAILED_PRECONDITION:The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   >
+
+The above exception was the direct cause of the following exception:
+tests/tier3a_production_acceptance/test_daily_contract.py:61: in test_no_videos_private
+    docs = list(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/stream_generator.py:58: in __next__
+    return self._generator.__next__()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:400: in _make_stream
+    response_iterator, expected_prefix = self._get_stream_iterator(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:250: in _get_stream_iterator
+    response_iterator = self._client._firestore_api.run_query(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/services/firestore/client.py:1558: in run_query
+    response = rpc(
+/usr/local/lib/python3.12/dist-packages/google/api_core/gapic_v1/method.py:128: in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:294: in retry_wrapped_func
+    return retry_target(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:156: in retry_target
+    next_sleep = _retry_error_helper(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_base.py:216: in _retry_error_helper
+    raise final_exc from source_exc
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:147: in retry_target
+    result = target()
+             ^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/timeout.py:130: in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:153: in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+E   google.api_core.exceptions.FailedPrecondition: 400 The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB
+______________________ test_no_videos_private[philosophy] ______________________
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:149: in error_remapped_callable
+    return _StreamingResponseIterator(
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:71: in __init__
+    self._stored_first_result = next(self._wrapped)
+                                ^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:547: in __next__
+    return self._next()
+           ^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/grpc/_channel.py:965: in _next
+    raise self
+E   grpc._channel._MultiThreadedRendezvous: <_MultiThreadedRendezvous of RPC that terminated with:
+E   	status = StatusCode.FAILED_PRECONDITION
+E   	details = "The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   	debug_error_string = "FAILED_PRECONDITION:The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB"
+E   >
+
+The above exception was the direct cause of the following exception:
+tests/tier3a_production_acceptance/test_daily_contract.py:61: in test_no_videos_private
+    docs = list(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/stream_generator.py:58: in __next__
+    return self._generator.__next__()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:400: in _make_stream
+    response_iterator, expected_prefix = self._get_stream_iterator(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/query.py:250: in _get_stream_iterator
+    response_iterator = self._client._firestore_api.run_query(
+../.local/lib/python3.12/site-packages/google/cloud/firestore_v1/services/firestore/client.py:1558: in run_query
+    response = rpc(
+/usr/local/lib/python3.12/dist-packages/google/api_core/gapic_v1/method.py:128: in __call__
+    return wrapped_func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:294: in retry_wrapped_func
+    return retry_target(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:156: in retry_target
+    next_sleep = _retry_error_helper(
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_base.py:216: in _retry_error_helper
+    raise final_exc from source_exc
+/usr/local/lib/python3.12/dist-packages/google/api_core/retry/retry_unary.py:147: in retry_target
+    result = target()
+             ^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/timeout.py:130: in func_with_timeout
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/dist-packages/google/api_core/grpc_helpers.py:153: in error_remapped_callable
+    raise exceptions.from_grpc_error(exc) from exc
+E   google.api_core.exceptions.FailedPrecondition: 400 The query requires an index. You can create it here: https://console.firebase.google.com/v1/r/project/friday-media-prod/firestore/indexes?create_composite=Cldwcm9qZWN0cy9mcmlkYXktbWVkaWEtcHJvZC9kYXRhYmFzZXMvKGRlZmF1bHQpL2NvbGxlY3Rpb25Hcm91cHMvY29udGVudF9xdWV1ZS9pbmRleGVzL18QARoMCghicmFuZF9pZBABGg4KCmNyZWF0ZWRfYXQQARoMCghfX25hbWVfXxAB
+_________________________ test_no_orphan_queue_records _________________________
+tests/tier3a_production_acceptance/test_daily_contract.py:91: in test_no_orphan_queue_records
+    assert len(orphans) == 0, f"Orphan queue records found: {orphans}"
+E   AssertionError: Orphan queue records found: [{'id': 'auto_bd_threatpulse_20260803_104811', 'status': 'SCHEDULED', 'created_at': '2026-08-03T10:49:08.042000+00:00'}, {'id': 'auto_bd_threatpulse_20260806_185607', 'status': 'PUBLISHED', 'created_at': '2026-08-06T18:58:44.130000+00:00'}, {'id': 'auto_bd_threatpulse_20260806_190338', 'status': 'PUBLISHED', 'created_at': '2026-08-06T19:05:51.909000+00:00'}, {'id': 'auto_bd_threatpulse_20260806_220323', 'status': 'SCHEDULED', 'created_at': '2026-08-06T22:12:36.457000+00:00'}, {'id': 'auto_bd_threatpulse_20260807_020212', 'status': 'SCHEDULED', 'created_at': '2026-08-07T02:09:16.063000+00:00'}, {'id': 'auto_bd_threatpulse_20260807_040314', 'status': 'SCHEDULED', 'created_at': '2026-08-07T04:12:15.702000+00:00'}, {'id': 'auto_bd_threatpulse_20260807_100242', 'status': 'SCHEDULED', 'created_at': '2026-08-07T10:04:00.599000+00:00'}, {'id': 'auto_bd_threatpulse_20260807_110227', 'status': 'SCHEDULED', 'created_at': '2026-08-07T11:04:37.883000+00:00'}, {'id': 'auto_kids_universe_20260806_230335', 'status': 'PUBLISHED', 'created_at': '2026-08-06T23:11:20.375000+00:00'}, {'id': 'auto_kids_universe_20260807_000317', 'status': 'SCHEDULED', 'created_at': '2026-08-07T00:11:45.033000+00:00'}, {'id': 'auto_kids_universe_20260807_030313', 'status': 'SCHEDULED', 'created_at': '2026-08-07T03:14:02.382000+00:00'}, {'id': 'auto_kids_universe_20260807_100258', 'status': 'SCHEDULED', 'created_at': '2026-08-07T10:05:27.170000+00:00'}, {'id': 'auto_philosophy_20260806_185624', 'status': 'PUBLISHED', 'created_at': '2026-08-06T18:58:44.130000+00:00'}, {'id': 'auto_philosophy_20260807_010330', 'status': 'PUBLISHED', 'created_at': '2026-08-07T01:11:57.731000+00:00'}, {'id': 'auto_philosophy_20260807_100324', 'status': 'SCHEDULED', 'created_at': '2026-08-07T10:25:27.936000+00:00'}, {'id': 'auto_philosophy_20260807_110243', 'status': 'SCHEDULED', 'created_at': '2026-08-07T11:04:37.864000+00:00'}, {'id': 'auto_philosophy_20260807_111140', 'status': 'SCHEDULED', 'created_at': '2026-08-07T11:13:26.449000+00:00'}, {'id': 'auto_wealthwise_20260803_111156', 'status': 'SCHEDULED', 'created_at': '2026-08-03T11:13:17.604000+00:00'}, {'id': 'auto_wealthwise_20260806_185643', 'status': 'PUBLISHED', 'created_at': '2026-08-06T18:58:54.905000+00:00'}, {'id': 'auto_wealthwise_20260806_192317', 'status': 'PUBLISHED', 'created_at': '2026-08-06T19:32:52.971000+00:00'}, {'id': 'auto_wealthwise_20260806_200340', 'status': 'SCHEDULED', 'created_at': '2026-08-06T20:12:51.916000+00:00'}, {'id': 'auto_wealthwise_20260806_210358', 'status': 'SCHEDULED', 'created_at': '2026-08-06T21:13:06.725000+00:00'}, {'id': 'auto_wealthwise_20260806_230420', 'status': 'SCHEDULED', 'created_at': '2026-08-06T23:07:36.558000+00:00'}, {'id': 'auto_wealthwise_20260807_030346', 'status': 'SCHEDULED', 'created_at': '2026-08-07T03:09:26.717000+00:00'}, {'id': 'auto_wealthwise_20260807_100358', 'status': 'SCHEDULED', 'created_at': '2026-08-07T10:05:27.399000+00:00'}, {'id': 'auto_wealthwise_20260807_110301', 'status': 'SCHEDULED', 'created_at': '2026-08-07T11:36:21.173000+00:00'}, {'id': 'gate_bd_threatpulse_0804_1613', 'status': 'PUBLISHED', 'created_at': '2026-08-04T16:15:23.706000+00:00'}, {'id': 'gate_bd_threatpulse_0804_1928', 'status': 'PUBLISHED', 'created_at': '2026-08-04T19:30:03.042000+00:00'}, {'id': 'gate_kids_universe_0804_1932', 'status': 'PUBLISHED', 'created_at': '2026-08-04T19:35:02.266000+00:00'}, {'id': 'gate_philosophy_0804_1044', 'status': 'PUBLISHED', 'created_at': '2026-08-04T10:48:05.482000+00:00'}, {'id': 'gate_philosophy_0804_1617', 'status': 'PUBLISHED', 'created_at': '2026-08-04T16:18:21.652000+00:00'}, {'id': 'gate_wealthwise_0804_1716', 'status': 'PUBLISHED', 'created_at': '2026-08-04T17:21:11.696000+00:00'}, {'id': 'val_kids_universe_0806_164606', 'status': 'PUBLISHED', 'created_at': '2026-08-06T16:46:10.157000+00:00'}, {'id': 'validation_test_final_001', 'status': 'SCHEDULED', 'created_at': '2026-08-07T11:15:54.412000+00:00'}, {'id': 'validation_test_final_002', 'status': 'SCHEDULED', 'created_at': '2026-08-07T11:14:23.856000+00:00'}, {'id': 'validation_test_final_003', 'status': 'SCHEDULED', 'created_at': '2026-08-07T10:46:51.176000+00:00'}, {'id': 'validation_test_final_006', 'status': 'PUBLISHED', 'created_at': '2026-08-07T10:57:13.885000+00:00'}, {'id': 'validation_test_final_007', 'status': 'PUBLISHED', 'created_at': '2026-08-07T11:37:04.393000+00:00'}]
+E   assert 38 == 0
+E    +  where 38 = len([{'id': 'auto_bd_threatpulse_20260803_104811', 'status': 'SCHEDULED', 'created_at': '2026-08-03T10:49:08.042000+00:00'}, {'id': 'auto_bd_threatpulse_20260806_185607', 'status': 'PUBLISHED', 'created_at': '2026-08-06T18:58:44.130000+00:00'}, {'id': 'auto_bd_threatpulse_20260806_190338', 'status': 'PUBLISHED', 'created_at': '2026-08-06T19:05:51.909000+00:00'}, {'id': 'auto_bd_threatpulse_20260806_220323', 'status': 'SCHEDULED', 'created_at': '2026-08-06T22:12:36.457000+00:00'}, {'id': 'auto_bd_threatpulse_20260807_020212', 'status': 'SCHEDULED', 'created_at': '2026-08-07T02:09:16.063000+00:00'}, {'id': 'auto_bd_threatpulse_20260807_040314', 'status': 'SCHEDULED', 'created_at': '2026-08-07T04:12:15.702000+00:00'}, ...])
+_______________________ test_no_dead_letter_items_today ________________________
+tests/tier3a_production_acceptance/test_daily_contract.py:108: in test_no_dead_letter_items_today
+    if ts_dt >= today:
+       ^^^^^^^^^^^^^^
+E   TypeError: can't compare offset-naive and offset-aware datetimes
+_______________________ test_no_items_stuck_in_rendering _______________________
+tests/tier3a_production_acceptance/test_daily_contract.py:138: in test_no_items_stuck_in_rendering
+    assert len(stuck) == 0, f"Items stuck in RENDERING > 30min: {stuck}"
+E   AssertionError: Items stuck in RENDERING > 30min: ['v4_bd_threatpulse_2052', 'v4_bd_threatpulse_2817', 'v4_bd_threatpulse_3732', 'v4_bd_threatpulse_3935', 'v4_bd_threatpulse_4225', 'v4_wealthwise_4013']
+E   assert 6 == 0
+E    +  where 6 = len(['v4_bd_threatpulse_2052', 'v4_bd_threatpulse_2817', 'v4_bd_threatpulse_3732', 'v4_bd_threatpulse_3935', 'v4_bd_threatpulse_4225', 'v4_wealthwise_4013'])
+_________________ test_no_items_stuck_in_non_terminal_over_2h __________________
+tests/tier3b_operational_health/test_firestore_collections.py:78: in test_no_items_stuck_in_non_terminal_over_2h
+    assert len(stuck) == 0, f"Stuck items found (>2h, non-terminal): {stuck}"
+E   AssertionError: Stuck items found (>2h, non-terminal): [{'id': 'v4_bd_threatpulse_2052', 'status': 'rendering'}, {'id': 'v4_bd_threatpulse_2817', 'status': 'rendering'}, {'id': 'v4_bd_threatpulse_3732', 'status': 'rendering'}, {'id': 'v4_bd_threatpulse_3935', 'status': 'rendering'}, {'id': 'v4_bd_threatpulse_4225', 'status': 'rendering'}, {'id': 'v4_wealthwise_4013', 'status': 'rendering'}]
+E   assert 6 == 0
+E    +  where 6 = len([{'id': 'v4_bd_threatpulse_2052', 'status': 'rendering'}, {'id': 'v4_bd_threatpulse_2817', 'status': 'rendering'}, {'id': 'v4_bd_threatpulse_3732', 'status': 'rendering'}, {'id': 'v4_bd_threatpulse_3935', 'status': 'rendering'}, {'id': 'v4_bd_threatpulse_4225', 'status': 'rendering'}, {'id': 'v4_wealthwise_4013', 'status': 'rendering'}])
+_______________________ test_brand_isolation_under_scale _______________________
+tests/tier4_chaos/test_scalability.py:82: in test_brand_isolation_under_scale
+    for b_id in brands_16.keys():
+E   AssertionError: assert 64 == 61
+E    +  where 64 = len(['brand_00', 'brand_00', 'brand_00', 'brand_00', 'brand_01', 'brand_01', ...])
+------------------------------ Captured log call -------------------------------
+ERROR    src.engine.goal_engine:goal_engine.py:61 Error in brand worker cycle: Brand 05 unexpected crash
+ERROR    src.engine.goal_engine:goal_engine.py:61 Error in brand worker cycle: Brand 05 unexpected crash
+ERROR    src.engine.goal_engine:goal_engine.py:61 Error in brand worker cycle: Brand 05 unexpected crash
+ERROR    src.engine.goal_engine:goal_engine.py:61 Error in brand worker cycle: Brand 05 unexpected crash
+____________________ test_crash_at_max_retries_sends_to_dlq ____________________
+tests/tier4_chaos/test_worker_crashes.py:113: in test_crash_at_max_retries_sends_to_dlq
+    doc_ref=doc_ref,
+E   AssertionError: Expected FAILED: ["call({'status': 'TOPIC_SELECTED'})", "call({'status': 'RETRY', 'retry_count': 1, 'last_error': 'Permanent failure', 'failed_state': 'TOPIC_SELECTED'})"]
+E   assert False
+E    +  where False = any(<generator object test_crash_at_max_retries_sends_to_dlq.<locals>.<genexpr> at 0x7c29bf57d560>)
+------------------------------ Captured log call -------------------------------
+WARNING  src.engine.retry_manager:retry_manager.py:44 Error in _execute_script: Permanent failure. Retrying in 3.93s (Attempt 1/5)
+WARNING  src.engine.retry_manager:retry_manager.py:44 Error in _execute_script: Permanent failure. Retrying in 5.75s (Attempt 2/5)
+WARNING  src.engine.retry_manager:retry_manager.py:44 Error in _execute_script: Permanent failure. Retrying in 9.03s (Attempt 3/5)
+WARNING  src.engine.retry_manager:retry_manager.py:44 Error in _execute_script: Permanent failure. Retrying in 16.54s (Attempt 4/5)
+ERROR    src.engine.retry_manager:retry_manager.py:29 Max retries reached for _execute_script. Writing to dead-letter queue.
+ERROR    src.engine.brand_worker:brand_worker.py:187 Error in brand worker for bd_threatpulse_6f85b0e5
+Traceback (most recent call last):
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 116, in _process_content
+    script = self._execute_script(brand, topic)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 42, in wrapper
+    raise e
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 18, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 217, in _execute_script
+    return generate_script(brand, topic)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 18, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 217, in _execute_script
+    return generate_script(brand, topic)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 18, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 217, in _execute_script
+    return generate_script(brand, topic)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 18, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 217, in _execute_script
+    return generate_script(brand, topic)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/retry_manager.py", line 18, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py", line 217, in _execute_script
+    return generate_script(brand, topic)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1134, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1138, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/unittest/mock.py", line 1193, in _execute_mock_call
+    raise effect
+Exception: Permanent failure
+______________________ test_golden_e2e_pipeline_workflow _______________________
+tests/tier5_golden/test_golden_e2e.py:107: in test_golden_e2e_pipeline_workflow
+    mock_metrics.return_value.increment_metric.assert_called_with("bd_threatpulse", ANY, "published")
+                                                                                    ^^^^^^^^^^
+E   AttributeError: module 'pytest' has no attribute 'any'
+=============================== warnings summary ===============================
+tests/tier3a_production_acceptance/test_daily_contract.py:10
+  /home/khmzamantonmoy/friday-media-os/tests/tier3a_production_acceptance/test_daily_contract.py:10: PytestUnknownMarkWarning: Unknown pytest.mark.acceptance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.acceptance
+
+tests/tier3a_production_acceptance/test_youtube_oauth.py:9
+  /home/khmzamantonmoy/friday-media-os/tests/tier3a_production_acceptance/test_youtube_oauth.py:9: PytestUnknownMarkWarning: Unknown pytest.mark.acceptance - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.acceptance
+
+tests/tier3b_operational_health/test_dashboard_sync.py:8
+  /home/khmzamantonmoy/friday-media-os/tests/tier3b_operational_health/test_dashboard_sync.py:8: PytestUnknownMarkWarning: Unknown pytest.mark.health - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.health
+
+tests/tier3b_operational_health/test_firestore_collections.py:9
+  /home/khmzamantonmoy/friday-media-os/tests/tier3b_operational_health/test_firestore_collections.py:9: PytestUnknownMarkWarning: Unknown pytest.mark.health - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.health
+
+tests/tier3b_operational_health/test_production_metrics.py:9
+  /home/khmzamantonmoy/friday-media-os/tests/tier3b_operational_health/test_production_metrics.py:9: PytestUnknownMarkWarning: Unknown pytest.mark.health - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    pytestmark = pytest.mark.health
+
+tests/tier1_unit/test_semantic_memory.py::test_empty_collection_never_duplicate
+  /usr/local/lib/python3.12/dist-packages/google/cloud/aiplatform/models.py:52: FutureWarning: Support for google-cloud-storage < 3.0.0 will be removed in a future version of google-cloud-aiplatform. Please upgrade to google-cloud-storage >= 3.0.0.
+    from google.cloud.aiplatform.utils import gcs_utils
+
+tests/tier2_integration/test_brand_worker.py: 3 warnings
+tests/tier4_chaos/test_worker_crashes.py: 6 warnings
+tests/tier5_golden/test_golden_e2e.py: 1 warning
+  /home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py:33: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    today_iso = datetime.datetime.utcnow().date().isoformat()
+
+tests/tier2_integration/test_brand_worker.py::test_upload_failure_triggers_retry
+tests/tier2_integration/test_brand_worker.py::test_max_retries_sends_to_dlq
+tests/tier4_chaos/test_worker_crashes.py::test_crash_during_script_generation
+tests/tier4_chaos/test_worker_crashes.py::test_crash_during_voice_synthesis
+tests/tier4_chaos/test_worker_crashes.py::test_crash_during_image_generation
+tests/tier4_chaos/test_worker_crashes.py::test_crash_during_render
+tests/tier4_chaos/test_worker_crashes.py::test_crash_during_upload
+tests/tier4_chaos/test_worker_crashes.py::test_crash_at_max_retries_sends_to_dlq
+tests/tier5_golden/test_golden_e2e.py::test_golden_e2e_pipeline_workflow
+  /home/khmzamantonmoy/friday-media-os/src/engine/brand_worker.py:58: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "created_at": datetime.datetime.utcnow().isoformat(),
+
+tests/tier2_integration/test_goal_engine.py::test_zero_missing_no_worker_calls
+  /home/khmzamantonmoy/friday-media-os/tests/tier2_integration/test_goal_engine.py:43: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    today = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+tests/tier2_integration/test_goal_engine.py: 9 warnings
+tests/tier4_chaos/test_automatic_recovery.py: 1 warning
+tests/tier4_chaos/test_quota_limits.py: 4 warnings
+tests/tier4_chaos/test_scalability.py: 72 warnings
+  /home/khmzamantonmoy/friday-media-os/src/engine/goal_engine.py:29: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    today = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+tests/tier2_integration/test_publication_verifier.py::test_passes_when_public_processed_captioned
+tests/tier2_integration/test_publication_verifier.py::test_firestore_youtube_verified_written_on_pass
+tests/tier2_integration/test_publication_verifier.py::test_brand_scoped_credentials_used
+  /home/khmzamantonmoy/friday-media-os/src/engine/publication_verifier.py:75: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "verified_at": datetime.datetime.utcnow().isoformat()
+
+tests/tier2_integration/test_scheduler_housekeeping.py::test_stale_item_marked_failed
+tests/tier2_integration/test_scheduler_housekeeping.py::test_fresh_item_not_touched
+tests/tier2_integration/test_scheduler_housekeeping.py::test_false_verified_flag_reset
+tests/tier2_integration/test_scheduler_housekeeping.py::test_correct_verified_flag_preserved
+  /home/khmzamantonmoy/friday-media-os/tests/tier2_integration/test_scheduler_housekeeping.py:12: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at = (datetime.datetime.utcnow() - datetime.timedelta(hours=created_at_delta_hours)).isoformat()
+
+tests/tier2_integration/test_scheduler_housekeeping.py::test_stale_item_marked_failed
+tests/tier2_integration/test_scheduler_housekeeping.py::test_fresh_item_not_touched
+tests/tier2_integration/test_scheduler_housekeeping.py::test_false_verified_flag_reset
+tests/tier2_integration/test_scheduler_housekeeping.py::test_correct_verified_flag_preserved
+tests/tier2_integration/test_scheduler_housekeeping.py::test_housekeeping_exception_does_not_crash_scheduler
+tests/tier2_integration/test_scheduler_housekeeping.py::test_all_four_brands_evaluated
+tests/tier2_integration/test_scheduler_housekeeping.py::test_brand_error_does_not_stop_others
+tests/tier4_chaos/test_automatic_recovery.py::test_scheduler_restart_resumes_missing_slots
+tests/tier4_chaos/test_quota_limits.py::test_one_brand_quota_does_not_affect_others
+  /home/khmzamantonmoy/friday-media-os/src/scheduler/autonomous_scheduler.py:23: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.datetime.utcnow()
+
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[bd_threatpulse]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[wealthwise]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[kids_universe]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[philosophy]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[bd_threatpulse]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[wealthwise]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[kids_universe]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[philosophy]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_dead_letter_items_today
+  /home/khmzamantonmoy/friday-media-os/tests/tier3a_production_acceptance/test_daily_contract.py:22: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+tests/tier3a_production_acceptance/test_daily_contract.py: 8 warnings
+tests/tier3b_operational_health/test_dashboard_sync.py: 2 warnings
+tests/tier4_chaos/test_quota_limits.py: 1 warning
+  /home/khmzamantonmoy/.local/lib/python3.12/site-packages/google/cloud/firestore_v1/base_collection.py:304: UserWarning: Detected filter using positional arguments. Prefer using the 'filter' keyword argument instead.
+    return query.where(field_path, op_string, value)
+
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[bd_threatpulse]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[wealthwise]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[kids_universe]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[philosophy]
+  /home/khmzamantonmoy/friday-media-os/tests/tier3a_production_acceptance/test_daily_contract.py:30: UserWarning: Detected filter using positional arguments. Prefer using the 'filter' keyword argument instead.
+    .where("created_at", ">=", today)
+
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[bd_threatpulse]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[wealthwise]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[kids_universe]
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[philosophy]
+  /home/khmzamantonmoy/friday-media-os/tests/tier3a_production_acceptance/test_daily_contract.py:64: UserWarning: Detected filter using positional arguments. Prefer using the 'filter' keyword argument instead.
+    .where("created_at", ">=", today)
+
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_orphan_queue_records
+  /home/khmzamantonmoy/friday-media-os/tests/tier3a_production_acceptance/test_daily_contract.py:79: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    two_hours_ago = (datetime.datetime.utcnow() - datetime.timedelta(hours=2)).isoformat()
+
+tests/tier3a_production_acceptance/test_daily_contract.py::test_no_items_stuck_in_rendering
+  /home/khmzamantonmoy/friday-media-os/tests/tier3a_production_acceptance/test_daily_contract.py:128: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    thirty_min_ago = (datetime.datetime.utcnow() - datetime.timedelta(minutes=30)).isoformat()
+
+tests/tier3b_operational_health/test_firestore_collections.py::test_no_items_stuck_in_non_terminal_over_2h
+  /home/khmzamantonmoy/friday-media-os/tests/tier3b_operational_health/test_firestore_collections.py:65: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    two_hours_ago = (datetime.datetime.utcnow() - datetime.timedelta(hours=2)).isoformat()
+
+tests/tier3b_operational_health/test_production_metrics.py::test_brand_has_today_metrics_doc[bd_threatpulse]
+tests/tier3b_operational_health/test_production_metrics.py::test_brand_has_today_metrics_doc[wealthwise]
+tests/tier3b_operational_health/test_production_metrics.py::test_brand_has_today_metrics_doc[kids_universe]
+tests/tier3b_operational_health/test_production_metrics.py::test_brand_has_today_metrics_doc[philosophy]
+  /home/khmzamantonmoy/friday-media-os/tests/tier3b_operational_health/test_production_metrics.py:29: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    today = datetime.datetime.utcnow().date().isoformat()
+
+tests/tier3b_operational_health/test_production_metrics.py::test_published_count_is_non_negative[bd_threatpulse]
+tests/tier3b_operational_health/test_production_metrics.py::test_published_count_is_non_negative[wealthwise]
+tests/tier3b_operational_health/test_production_metrics.py::test_published_count_is_non_negative[kids_universe]
+tests/tier3b_operational_health/test_production_metrics.py::test_published_count_is_non_negative[philosophy]
+  /home/khmzamantonmoy/friday-media-os/tests/tier3b_operational_health/test_production_metrics.py:43: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    today = datetime.datetime.utcnow().date().isoformat()
+
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[bd_threatpulse]
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[wealthwise]
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[kids_universe]
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[philosophy]
+  /home/khmzamantonmoy/friday-media-os/tests/tier3b_operational_health/test_production_metrics.py:56: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    today_str = datetime.datetime.utcnow().date().isoformat()
+
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[bd_threatpulse]
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[wealthwise]
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[kids_universe]
+tests/tier3b_operational_health/test_production_metrics.py::test_metrics_agree_with_content_items[philosophy]
+  /home/khmzamantonmoy/friday-media-os/tests/tier3b_operational_health/test_production_metrics.py:57: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    today = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+tests/tier3b_operational_health/test_production_metrics.py::test_no_metrics_gap_yesterday
+  /home/khmzamantonmoy/friday-media-os/tests/tier3b_operational_health/test_production_metrics.py:86: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    yesterday = (datetime.datetime.utcnow() - datetime.timedelta(days=1)).date().isoformat()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tier2_integration/test_brand_worker.py::test_max_retries_sends_to_dlq
+FAILED tests/tier2_integration/test_goal_engine.py::test_unverified_complete_not_counted
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[bd_threatpulse]
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[wealthwise]
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[kids_universe]
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_daily_contract_four_videos[philosophy]
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[bd_threatpulse]
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[wealthwise]
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[kids_universe]
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_no_videos_private[philosophy]
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_no_orphan_queue_records
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_no_dead_letter_items_today
+FAILED tests/tier3a_production_acceptance/test_daily_contract.py::test_no_items_stuck_in_rendering
+FAILED tests/tier3b_operational_health/test_firestore_collections.py::test_no_items_stuck_in_non_terminal_over_2h
+FAILED tests/tier4_chaos/test_scalability.py::test_brand_isolation_under_scale
+FAILED tests/tier4_chaos/test_worker_crashes.py::test_crash_at_max_retries_sends_to_dlq
+FAILED tests/tier5_golden/test_golden_e2e.py::test_golden_e2e_pipeline_workflow
+= 17 failed, 140 passed, 8 skipped, 5 xfailed, 176 warnings in 626.56s (0:10:26) =

@@ -16,7 +16,10 @@ from google.cloud import secretmanager
 from src.config.brand_registry import BRAND_REGISTRY, get_brand_config
 
 PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "friday-media-prod")
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.force-ssl"
+]
 
 
 def access_secret_version(secret_id: str, version_id: str = "latest") -> str:
@@ -38,7 +41,7 @@ def add_secret_version(secret_id: str, payload_data: str) -> str:
     return response.name
 
 
-def get_youtube_credentials(channel: str):
+def get_youtube_credentials(channel: str, force_reauth: bool = False):
     """
     Retrieves authorized YouTube API credentials for the requested channel.
     Resolves client secrets and tokens dynamically via Secret Manager.
@@ -50,14 +53,16 @@ def get_youtube_credentials(channel: str):
     creds = None
 
     # 1. Attempt to load token from Secret Manager
-    try:
-        token_data_str = access_secret_version(token_secret_id)
-        token_info = json.loads(token_data_str)
-        creds = Credentials.from_authorized_user_info(token_info, SCOPES)
-        print(f"Loaded token from Secret Manager for channel '{channel}' ({brand_cfg['youtube_channel_name']})")
-    except Exception as e:
-        print(f"No token in Secret Manager for {channel} ({token_secret_id}): {e}")
-        # No token found; will proceed to interactive authentication flow.
+    if not force_reauth:
+        try:
+            token_data_str = access_secret_version(token_secret_id)
+            token_info = json.loads(token_data_str)
+            scopes = token_info.get("scopes", SCOPES)
+            creds = Credentials.from_authorized_user_info(token_info, scopes)
+            print(f"Loaded token from Secret Manager for channel '{channel}' ({brand_cfg['youtube_channel_name']})")
+        except Exception as e:
+            print(f"No token in Secret Manager for {channel} ({token_secret_id}): {e}")
+            # No token found; will proceed to interactive authentication flow.
 
 
     # 2. Refresh credentials if expired
@@ -129,4 +134,4 @@ if __name__ == "__main__":
     channel_arg = "bd_threatpulse"
     if len(sys.argv) > 1:
         channel_arg = sys.argv[1]
-    get_youtube_credentials(channel_arg)
+    get_youtube_credentials(channel_arg, force_reauth=True)

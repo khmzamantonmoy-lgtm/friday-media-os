@@ -60,6 +60,7 @@ gcloud run jobs update media-pipeline \
   --cpu=2 \
   --task-timeout=1800 \
   --max-retries=1 \
+  --set-secrets="PRIMARY_KEY=gemini-api-key:latest" \
   --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCP_REGION=${REGION},GCS_BUCKET_NAME=friday-media-assets-prod" \
 || \
 gcloud run jobs create media-pipeline \
@@ -70,6 +71,15 @@ gcloud run jobs create media-pipeline \
   --cpu=2 \
   --task-timeout=1800 \
   --max-retries=1 \
+  --set-secrets="PRIMARY_KEY=gemini-api-key:latest" \
+  --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCP_REGION=${REGION},GCS_BUCKET_NAME=friday-media-assets-prod"
+
+echo "== Updating scheduler job to inject credentials =="
+gcloud run jobs update media-scheduler \
+  --image "${PIPELINE_IMAGE}" \
+  --region "${REGION}" \
+  --service-account="${PIPE_SA}" \
+  --set-secrets="PRIMARY_KEY=gemini-api-key:latest" \
   --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCP_REGION=${REGION},GCS_BUCKET_NAME=friday-media-assets-prod"
 
 echo "== Done. UI URL: =="
